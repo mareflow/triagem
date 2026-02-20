@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Triagem de Produção | TurboSul</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .os-card.active {
+            border-left: 4px solid #2563EB;
+            background-color: #f8fafc;
+        }
+
+        /* Estilização Customizada dos Botões de Disponibilidade */
+        .btn-toggle-stock.active {
+            background-color: #22c55e !important;
+            color: white !important;
+        }
+        .btn-toggle-order.active {
+            background-color: #ef4444 !important;
+            color: white !important;
+        }
+        
+        .tab-active {
+            background-color: #2563EB;
+            color: white;
+        }
+        
+        .obs-input {
+            background-color: #334155;
+            color: #f8fafc;
+        }
+
+        /* Checkbox Roxo Customizado */
+        .purple-checkbox:checked {
+            background-color: #7c3aed;
+            border-color: #7c3aed;
+        }
+    </style>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER FIXO -->
+    <header class="bg-white border-b px-8 py-3 flex items-center justify-between z-50">
+        <div class="flex items-center space-x-4">
+            <img src="https://i.postimg.cc/Jh5Jvrc9/IMG-7901.png" alt="Logo TurboSul" class="h-10">
+            <div>
+                <h1 class="text-slate-800 font-bold text-lg leading-tight uppercase tracking-tight">TurboSul - Controle de Produção</h1>
+                <p class="text-slate-500 text-xs font-medium">Gerenciamento de Ordens de Serviço</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-6">
+            <button class="bg-blue-100 text-blue-700 px-4 py-1.5 rounded-md text-sm font-semibold hover:bg-blue-200 transition">Quadro de Produção</button>
+            <div class="flex items-center space-x-2 text-slate-600">
+                <span class="text-xs font-bold uppercase tracking-wider">Administrador</span>
+                <span class="text-xs text-slate-400">|</span>
+                <span class="text-xs font-medium">Setor Triagem</span>
+            </div>
+            <button onclick="logout()" class="bg-red-500 text-white px-4 py-1.5 rounded-md text-sm font-bold hover:bg-red-600 transition">Sair</button>
+        </div>
+    </header>
+
+    <!-- ÁREA PRINCIPAL -->
+    <main class="flex-1 flex overflow-hidden p-6 gap-6">
+        
+        <!-- COLUNA ESQUERDA: FILA -->
+        <aside class="w-80 flex flex-col">
+            <h2 class="text-slate-800 font-extrabold text-2xl mb-4 tracking-tight uppercase">Triagem de Produção</h2>
+            
+            <div id="fila-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
+                <!-- Skeleton Loading -->
+                <div class="bg-white p-4 rounded-xl shadow-sm animate-pulse">
+                    <div class="h-4 bg-slate-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ÁREA DE TRABALHO -->
+        <section class="flex-1 flex flex-col">
+            
+            <!-- NAVEGAÇÃO SUPERIOR -->
+            <div class="flex justify-end space-x-1 mb-4">
+                <button onclick="switchTab('triage')" id="tab-triage" class="px-6 py-2 rounded-l-lg text-sm font-bold tab-active shadow-sm transition">
+                    Ordens Aprovadas (Aguardando Decisão) <span id="count-triage" class="ml-1">(0)</span>
+                </button>
+                <button onclick="switchTab('pending')" id="tab-pending" class="px-6 py-2 rounded-r-lg text-sm font-bold bg-white text-slate-600 hover:bg-slate-50 shadow-sm transition">
+                    Pendências de Peças <span id="count-pending" class="ml-1">(0)</span>
+                </button>
+            </div>
+
+            <!-- PAINEL DETALHES -->
+            <div id="workspace-content" class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
+                
+                <!-- ESTADO VAZIO -->
+                <div id="empty-state" class="flex-1 flex items-center justify-center flex-col text-slate-400">
+                    <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    <span class="font-bold uppercase tracking-widest text-sm">Selecione uma ordem</span>
+                </div>
+
+                <!-- CONTEÚDO DA TRIAGEM -->
+                <div id="triage-panel" class="hidden flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
+                    <div class="flex justify-between items-start mb-6">
+                        <h3 class="text-slate-800 font-extrabold text-xl uppercase">Detalhes da Logística</h3>
+                        <button class="bg-slate-500 text-white text-[10px] font-bold px-3 py-1 rounded uppercase tracking-wider hover:bg-slate-600">Histórico</button>
+                    </div>
+
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                        <!-- LADO ESQUERDO: INFO -->
+                        <div class="space-y-6">
+                            <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
+                                <h4 class="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Informações OS</h4>
+                                <div class="space-y-3">
+                                    <p class="text-sm font-medium text-slate-500">Cliente: <span id="info-cliente" class="text-slate-800 font-bold ml-1">---</span></p>
+                                    <p class="text-sm font-medium text-slate-500">Modelo: <span id="info-modelo" class="text-slate-800 font-bold ml-1">---</span></p>
+                                    <p class="text-sm font-medium text-slate-500">OS Gerada: <span id="info-os" class="text-slate-800 font-bold ml-1">---</span></p>
+                                </div>
+                            </div>
+
+                            <div class="bg-purple-50 rounded-xl p-6 border border-purple-100 flex items-center space-x-4">
+                                <input type="checkbox" id="check-analisado" class="w-6 h-6 rounded border-purple-300 text-purple-600 focus:ring-purple-500 purple-checkbox">
+                                <label for="check-analisado" class="text-purple-800 font-black text-xs uppercase tracking-wider cursor-pointer">Marcar como analisado (Vendas)</label>
+                            </div>
+                        </div>
+
+                        <!-- LADO DIREITO: DISPONIBILIDADE -->
+                        <div class="flex flex-col">
+                            <h4 class="text-orange-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Disponibilidade de Peças</h4>
+                            <div id="lista-pecas" class="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100">
+                                <!-- Pecas inseridas aqui -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RODAPÉ: OBS E BOTÃO -->
+                    <div class="mt-auto pt-6 border-t border-slate-100 flex flex-col space-y-4">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações de Triagem</label>
+                        <textarea id="obs-triagem" rows="4" class="obs-input w-full rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Digite observações internas..."></textarea>
+                        
+                        <div class="flex justify-end pt-4">
+                            <button onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">
+                                Liberar para Desmontagem OS
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PAINEL PENDÊNCIAS (Visual Simples conforme imagem) -->
+                <div id="pending-panel" class="hidden flex-1 p-8">
+                    <h3 class="text-orange-600 font-black text-lg uppercase tracking-wider mb-6">Pendências de Peças</h3>
+                    <div id="lista-pecas-pendentes" class="space-y-4">
+                        <!-- Itens pendentes -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL DE CONFIRMAÇÃO -->
+    <div id="modal-confirm" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl">
+            <h4 class="text-xl font-black text-slate-800 mb-2">Confirmar Liberação?</h4>
+            <p class="text-slate-500 text-sm mb-6 font-medium">Isso moverá a OS para a fila de desmontagem e atualizará o estoque.</p>
+            <div class="flex gap-3">
+                <button onclick="closeModal('modal-confirm')" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition">Cancelar</button>
+                <button onclick="salvarTriagem()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition">Sim, Liberar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE SUCESSO -->
+    <div id="modal-success" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
+            <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h4 class="text-xl font-black text-slate-800 mb-2">Triagem Concluída!</h4>
+            <p class="text-slate-500 text-sm mb-6 font-medium">A OS foi encaminhada com sucesso para a produção.</p>
+            <button onclick="closeModal('modal-success')" class="w-full bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition tracking-widest uppercase text-xs">Ok, Entendido</button>
+        </div>
+    </div>
+
+    <script>
+        const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
+        const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
+        const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
+
+        let ordensAtuais = [];
+        let selecionada = null;
+        let pecasEstado = {}; // Armazena estoque/pedido por OS
+
+        // Início
+        window.onload = carregarDados;
+
+        async function carregarDados() {
+            try {
+                const res = await fetch(API_GET);
+                const json = await res.json();
+                ordensAtuais = json.data || [];
+                renderizarFila();
+                atualizarContadores();
+            } catch (err) {
+                console.error("Erro ao carregar fila:", err);
+            }
+        }
+
+        function renderizarFila() {
+            const container = document.getElementById('fila-container');
+            container.innerHTML = '';
+
+            ordensAtuais.forEach(os => {
+                const urgencyColor = getUrgencyColor(os.urgency);
+                container.innerHTML += `
+                    <div onclick="selecionarOS('${os.business_id}')" id="card-${os.business_id}" class="os-card bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
+                        <div class="flex justify-between items-start mb-2">
+                            <span class="text-slate-800 font-extrabold text-sm uppercase">${os.business_id}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${urgencyColor}">${os.urgency}</span>
+                        </div>
+                        <h3 class="text-slate-700 font-bold text-xs group-hover:text-blue-600 transition">${os.model}</h3>
+                        <p class="text-slate-400 text-[11px] font-medium">${os.client}</p>
+                    </div>
+                `;
+            });
+        }
+
+        function selecionarOS(id) {
+            selecionada = ordensAtuais.find(o => o.business_id === id);
+            pecasEstado = {}; // Reset local
+
+            // UI
+            document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active'));
+            document.getElementById(`card-${id}`).classList.add('active');
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('triage-panel').classList.remove('hidden');
+
+            // Populate
+            document.getElementById('info-cliente').innerText = selecionada.client;
+            document.getElementById('info-modelo').innerText = selecionada.model;
+            document.getElementById('info-os').innerText = selecionada.business_id;
+            document.getElementById('check-analisado').checked = false;
+            document.getElementById('obs-triagem').value = "";
+
+            // Render Peças
+            renderizarPecas(selecionada.checklist_geral || []);
+        }
+
+        function renderizarPecas(items) {
+            const container = document.getElementById('lista-pecas');
+            container.innerHTML = '';
+
+            // Filtrar apenas peças que precisam de ação (TROCAR ou RECONDICIONAR)
+            const pecasAlvo = items.filter(i => i.status === 'TROCAR' || i.status === 'RECONDICIONAR');
+
+            if(pecasAlvo.length === 0) {
+                container.innerHTML = '<div class="p-4 text-slate-400 text-xs text-center font-bold uppercase italic">Nenhuma peça para trocar/recondicionar</div>';
+                return;
+            }
+
+            pecasAlvo.forEach(peca => {
+                pecasEstado[peca.name] = 'STOCK'; // Default
+                
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-4 bg-white">
+                        <span class="text-slate-800 font-bold text-xs">${peca.name}</span>
+                        <div class="flex bg-slate-100 rounded-lg p-1">
+                            <button onclick="togglePeca('${peca.name}', 'STOCK', this)" class="btn-toggle-stock active text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all">Em Estoque</button>
+                            <button onclick="togglePeca('${peca.name}', 'ORDER', this)" class="btn-toggle-order text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all ml-1">Para Pedir</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function togglePeca(nome, status, el) {
+            pecasEstado[nome] = status;
+            const parent = el.parentElement;
+            parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+        function switchTab(type) {
+            const triagePanel = document.getElementById('triage-panel');
+            const pendingPanel = document.getElementById('pending-panel');
+            const tabTriage = document.getElementById('tab-triage');
+            const tabPending = document.getElementById('tab-pending');
+
+            if(type === 'triage') {
+                triagePanel.classList.toggle('hidden', !selecionada);
+                document.getElementById('empty-state').classList.toggle('hidden', !!selecionada);
+                pendingPanel.classList.add('hidden');
+                tabTriage.classList.add('tab-active');
+                tabPending.classList.remove('tab-active');
+                tabPending.classList.add('bg-white', 'text-slate-600');
+            } else {
+                triagePanel.classList.add('hidden');
+                document.getElementById('empty-state').classList.add('hidden');
+                pendingPanel.classList.remove('hidden');
+                tabPending.classList.add('tab-active');
+                tabTriage.classList.remove('tab-active');
+                tabTriage.classList.add('bg-white', 'text-slate-600');
+                renderizarPendencias();
+            }
+        }
+
+        function renderizarPendencias() {
+            const container = document.getElementById('lista-pecas-pendentes');
+            container.innerHTML = '';
+            
+            // Simulação baseada na imagem: itens marcados como 'Para Pedir'
+            // No sistema real, você puxaria isso do seu banco/webhook de pendências
+            container.innerHTML = `
+                <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
+                    <div class="flex items-center">
+                        <div class="w-2 h-2 rounded-full bg-orange-500 mr-3"></div>
+                        <span class="text-slate-700 font-bold text-sm">Carcaça Central</span>
+                    </div>
+                    <button class="text-green-600 border border-green-200 bg-green-50 text-[10px] font-black px-4 py-1.5 rounded-md uppercase tracking-wider hover:bg-green-100 transition">Marcar como recebido</button>
+                </div>
+            `;
+        }
+
+        function getUrgencyColor(u) {
+            if (u === 'Alta') return 'bg-orange-100 text-orange-600';
+            if (u === 'Urgente') return 'bg-red-100 text-red-600';
+            return 'bg-blue-100 text-blue-600';
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function confirmarSalvar() {
+            if(!selecionada) return;
+            document.getElementById('modal-confirm').classList.remove('hidden');
+        }
+
+        async function salvarTriagem() {
+            const btn = document.querySelector('#modal-confirm button:last-child');
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+
+            const payload = {
+                business_id: selecionada.business_id,
+                user_id: FALLBACK_USER,
+                analyzed_sales: document.getElementById('check-analisado').checked,
+                observations: document.getElementById('obs-triagem').value,
+                items_availability: Object.entries(pecasEstado).map(([name, status]) => ({
+                    name,
+                    availability: status
+                }))
+            };
+
+            try {
+                const res = await fetch(API_POST, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if(res.ok) {
+                    closeModal('modal-confirm');
+                    document.getElementById('modal-success').classList.remove('hidden');
+                    // Recarregar após fechar o modal
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2500);
+                }
+            } catch (err) {
+                alert("Erro ao salvar triagem. Tente novamente.");
+            } finally {
+                btn.innerText = "Sim, Liberar";
+                btn.disabled = false;
+            }
+        }
+
+        function atualizarContadores() {
+            document.getElementById('count-triage').innerText = `(${ordensAtuais.length})`;
+            // Simulado para o exemplo
+            document.getElementById('count-pending').innerText = `(1)`;
+        }
+
+        function logout() {
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
