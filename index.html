@@ -264,6 +264,7 @@
         }
         
         function selecionarOS(id) {
+            // Buscamos a ordem na lista local pelo business_id para carregar os detalhes na tela
             selecionada = allOrders.find(o => o.business_id === id);
             if (!selecionada) return;
 
@@ -372,7 +373,7 @@
             });
 
             const payload = {
-                business_id: selecionada.business_id,
+                os_id: selecionada.id, // Enviando o UUID real para o banco de dados
                 user_id: FALLBACK_USER,
                 analyzed_sales: document.getElementById('check-analisado').checked,
                 observations: document.getElementById('obs-triagem').value,
