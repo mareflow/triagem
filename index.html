@@ -237,7 +237,7 @@
             // CORREÇÃO: Filtra as ordens com base na aba ativa.
             let ordensParaMostrar = [];
             if (activeTab === 'triage') {
-                ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_TRIAGEM);
+                ordensParaMostrar = allOrders.filter(os => os.status && os.status.trim() === STATUS_AGUARDANDO_TRIAGEM);
             } else if (activeTab === 'pending') {
                 ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_PECAS);
             }
