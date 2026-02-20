@@ -20,11 +20,11 @@
 
         /* Estilização Customizada dos Botões de Disponibilidade */
         .btn-toggle-stock.active {
-            background-color: #22c55e !important;
+            background-color: #16a34a !important; /* Corrigido para green-600 */
             color: white !important;
         }
         .btn-toggle-order.active {
-            background-color: #ef4444 !important;
+            background-color: #dc2626 !important; /* Corrigido para red-600 */
             color: white !important;
         }
         
@@ -188,41 +188,73 @@
         </div>
     </div>
 
-    <script>
+<script>
         const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
         const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
-        let ordensAtuais = [];
-        let selecionada = null;
-        let pecasEstado = {}; // Armazena estoque/pedido por OS
+        // --- Core State ---
+        let allOrders = []; // Armazena todas as ordens da API
+        let selecionada = null; // A OS atualmente selecionada
+        let activeTab = 'triage'; // A aba ativa: 'triage' ou 'pending'
 
-        // Início
-        window.onload = carregarDados;
+        // --- Constantes de Status ---
+        const STATUS_AGUARDANDO_TRIAGEM = 'Aguardando Triagem Logística';
+        const STATUS_AGUARDANDO_PECAS = 'Aguardando Peças';
 
+        // --- Inicialização ---
+        document.addEventListener('DOMContentLoaded', carregarDados);
+
+        // --- Carregamento de Dados ---
         async function carregarDados() {
+            const container = document.getElementById('fila-container');
+            container.innerHTML = `
+                <div class="bg-white p-4 rounded-xl shadow-sm animate-pulse">
+                    <div class="h-4 bg-slate-200 rounded w-1/2 mb-3"></div>
+                    <div class="h-3 bg-slate-100 rounded w-3/4"></div>
+                </div>`;
             try {
-                const res = await fetch(API_GET);
-                const json = await res.json();
-                ordensAtuais = json.data || [];
-                renderizarFila();
+                const response = await fetch(API_GET);
+                if (!response.ok) throw new Error(`Erro na API: ${response.status}`);
+                
+                // CORREÇÃO: A API retorna um array direto, sem a chave .data.
+                const data = await response.json();
+                allOrders = Array.isArray(data) ? data : [];
+
+                renderizarFila(); // Renderiza a fila para a aba padrão
                 atualizarContadores();
             } catch (err) {
                 console.error("Erro ao carregar fila:", err);
+                container.innerHTML = `<p class="p-4 text-center text-red-500 font-medium">Falha ao carregar a fila.</p>`;
             }
         }
 
+        // --- Renderização da UI ---
         function renderizarFila() {
             const container = document.getElementById('fila-container');
             container.innerHTML = '';
+            
+            // CORREÇÃO: Filtra as ordens com base na aba ativa.
+            let ordensParaMostrar = [];
+            if (activeTab === 'triage') {
+                ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_TRIAGEM);
+            } else if (activeTab === 'pending') {
+                ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_PECAS);
+            }
+            
+            if (ordensParaMostrar.length === 0) {
+                 container.innerHTML = `<p class="p-4 text-center text-slate-500 text-sm">Nenhuma ordem nesta fila.</p>`;
+                 return;
+            }
 
-            ordensAtuais.forEach(os => {
+            // CORREÇÃO: Garante que os campos corretos (business_id, model, client, urgency) sejam usados.
+            ordensParaMostrar.forEach(os => {
                 const urgencyColor = getUrgencyColor(os.urgency);
                 container.innerHTML += `
                     <div onclick="selecionarOS('${os.business_id}')" id="card-${os.business_id}" class="os-card bg-white p-4 rounded-xl shadow-sm border border-slate-200 cursor-pointer hover:shadow-md transition-all group">
                         <div class="flex justify-between items-start mb-2">
                             <span class="text-slate-800 font-extrabold text-sm uppercase">${os.business_id}</span>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${urgencyColor}">${os.urgency}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${urgencyColor}">${os.urgency || 'Normal'}</span>
                         </div>
                         <h3 class="text-slate-700 font-bold text-xs group-hover:text-blue-600 transition">${os.model}</h3>
                         <p class="text-slate-400 text-[11px] font-medium">${os.client}</p>
@@ -230,33 +262,30 @@
                 `;
             });
         }
-
+        
         function selecionarOS(id) {
-            selecionada = ordensAtuais.find(o => o.business_id === id);
-            pecasEstado = {}; // Reset local
+            selecionada = allOrders.find(o => o.business_id === id);
+            if (!selecionada) return;
 
-            // UI
             document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active'));
             document.getElementById(`card-${id}`).classList.add('active');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('triage-panel').classList.remove('hidden');
 
-            // Populate
-            document.getElementById('info-cliente').innerText = selecionada.client;
-            document.getElementById('info-modelo').innerText = selecionada.model;
-            document.getElementById('info-os').innerText = selecionada.business_id;
+            // CORREÇÃO: Puxa os detalhes corretos do objeto 'selecionada' para o painel.
+            document.getElementById('info-cliente').innerText = selecionada.client || '---';
+            document.getElementById('info-modelo').innerText = selecionada.model || '---';
+            document.getElementById('info-os').innerText = selecionada.business_id || '---';
             document.getElementById('check-analisado').checked = false;
             document.getElementById('obs-triagem').value = "";
 
-            // Render Peças
             renderizarPecas(selecionada.checklist_geral || []);
         }
 
         function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
-
-            // Filtrar apenas peças que precisam de ação (TROCAR ou RECONDICIONAR)
+            
             const pecasAlvo = items.filter(i => i.status === 'TROCAR' || i.status === 'RECONDICIONAR');
 
             if(pecasAlvo.length === 0) {
@@ -265,8 +294,6 @@
             }
 
             pecasAlvo.forEach(peca => {
-                pecasEstado[peca.name] = 'STOCK'; // Default
-                
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-4 bg-white">
                         <span class="text-slate-800 font-bold text-xs">${peca.name}</span>
@@ -280,51 +307,101 @@
         }
 
         function togglePeca(nome, status, el) {
-            pecasEstado[nome] = status;
             const parent = el.parentElement;
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             el.classList.add('active');
         }
 
         function switchTab(type) {
+            activeTab = type;
+
             const triagePanel = document.getElementById('triage-panel');
             const pendingPanel = document.getElementById('pending-panel');
             const tabTriage = document.getElementById('tab-triage');
             const tabPending = document.getElementById('tab-pending');
 
-            if(type === 'triage') {
-                triagePanel.classList.toggle('hidden', !selecionada);
-                document.getElementById('empty-state').classList.toggle('hidden', !!selecionada);
-                pendingPanel.classList.add('hidden');
+            selecionada = null;
+            triagePanel.classList.add('hidden');
+            pendingPanel.classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+
+            if (type === 'triage') {
                 tabTriage.classList.add('tab-active');
+                tabTriage.classList.remove('bg-white', 'text-slate-600');
                 tabPending.classList.remove('tab-active');
                 tabPending.classList.add('bg-white', 'text-slate-600');
             } else {
-                triagePanel.classList.add('hidden');
-                document.getElementById('empty-state').classList.add('hidden');
                 pendingPanel.classList.remove('hidden');
                 tabPending.classList.add('tab-active');
+                tabPending.classList.remove('bg-white', 'text-slate-600');
                 tabTriage.classList.remove('tab-active');
                 tabTriage.classList.add('bg-white', 'text-slate-600');
                 renderizarPendencias();
             }
+            renderizarFila();
         }
 
         function renderizarPendencias() {
-            const container = document.getElementById('lista-pecas-pendentes');
-            container.innerHTML = '';
-            
-            // Simulação baseada na imagem: itens marcados como 'Para Pedir'
-            // No sistema real, você puxaria isso do seu banco/webhook de pendências
-            container.innerHTML = `
+            document.getElementById('lista-pecas-pendentes').innerHTML = `
                 <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
                     <div class="flex items-center">
                         <div class="w-2 h-2 rounded-full bg-orange-500 mr-3"></div>
-                        <span class="text-slate-700 font-bold text-sm">Carcaça Central</span>
+                        <span class="text-slate-700 font-bold text-sm">Peça Pendente (Exemplo)</span>
                     </div>
                     <button class="text-green-600 border border-green-200 bg-green-50 text-[10px] font-black px-4 py-1.5 rounded-md uppercase tracking-wider hover:bg-green-100 transition">Marcar como recebido</button>
-                </div>
-            `;
+                </div>`;
+        }
+        
+        function atualizarContadores() {
+            const triageCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM).length;
+            const pendingCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS).length;
+            document.getElementById('count-triage').innerText = `(${triageCount})`;
+            document.getElementById('count-pending').innerText = `(${pendingCount})`;
+        }
+
+        async function salvarTriagem() {
+            const btn = document.querySelector('#modal-confirm button:last-child');
+            btn.innerText = "Salvando...";
+            btn.disabled = true;
+
+            const pecasEstado = {};
+            document.querySelectorAll('#lista-pecas > div[class*="flex"]').forEach(div => {
+                const name = div.querySelector('span').innerText;
+                const status = div.querySelector('button.active.btn-toggle-stock') ? 'STOCK' : 'ORDER';
+                pecasEstado[name] = status;
+            });
+
+            const payload = {
+                business_id: selecionada.business_id,
+                user_id: FALLBACK_USER,
+                analyzed_sales: document.getElementById('check-analisado').checked,
+                observations: document.getElementById('obs-triagem').value,
+                items_availability: Object.entries(pecasEstado).map(([name, availability]) => ({ name, availability }))
+            };
+
+            try {
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (!res.ok) throw new Error(await res.text());
+
+                closeModal('modal-confirm');
+                document.getElementById('modal-success').classList.remove('hidden');
+                
+            } catch (err) {
+                alert("Erro ao salvar triagem: " + err.message);
+            } finally {
+                btn.innerText = "Sim, Liberar";
+                btn.disabled = false;
+            }
+        }
+        
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+            if (id === 'modal-success') {
+                selecionada = null;
+                document.getElementById('triage-panel').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                carregarDados();
+            }
         }
 
         function getUrgencyColor(u) {
@@ -333,62 +410,13 @@
             return 'bg-blue-100 text-blue-600';
         }
 
-        function closeModal(id) {
-            document.getElementById(id).classList.add('hidden');
-        }
-
         function confirmarSalvar() {
             if(!selecionada) return;
             document.getElementById('modal-confirm').classList.remove('hidden');
         }
 
-        async function salvarTriagem() {
-            const btn = document.querySelector('#modal-confirm button:last-child');
-            btn.innerText = "Salvando...";
-            btn.disabled = true;
-
-            const payload = {
-                business_id: selecionada.business_id,
-                user_id: FALLBACK_USER,
-                analyzed_sales: document.getElementById('check-analisado').checked,
-                observations: document.getElementById('obs-triagem').value,
-                items_availability: Object.entries(pecasEstado).map(([name, status]) => ({
-                    name,
-                    availability: status
-                }))
-            };
-
-            try {
-                const res = await fetch(API_POST, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-
-                if(res.ok) {
-                    closeModal('modal-confirm');
-                    document.getElementById('modal-success').classList.remove('hidden');
-                    // Recarregar após fechar o modal
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 2500);
-                }
-            } catch (err) {
-                alert("Erro ao salvar triagem. Tente novamente.");
-            } finally {
-                btn.innerText = "Sim, Liberar";
-                btn.disabled = false;
-            }
-        }
-
-        function atualizarContadores() {
-            document.getElementById('count-triage').innerText = `(${ordensAtuais.length})`;
-            // Simulado para o exemplo
-            document.getElementById('count-pending').innerText = `(1)`;
-        }
-
         function logout() {
-            window.location.href = 'index.html';
+            console.log('Logout acionado.');
         }
     </script>
 </body>
