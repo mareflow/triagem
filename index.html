@@ -215,17 +215,26 @@
                 </div>`;
             try {
                 const response = await fetch(API_GET);
-                if (!response.ok) throw new Error(`Erro na API: ${response.status}`);
                 
-                // CORREÇÃO: A API retorna um array direto, sem a chave .data.
-                const data = await response.json();
-                allOrders = Array.isArray(data) ? data : [];
+                // Se a resposta não for OK ou o n8n retornar apenas a mensagem de "started",
+                // tratamos como uma lista vazia, evitando o erro na tela.
+                const data = await response.json().catch(() => null);
+                
+                if (Array.isArray(data)) {
+                    allOrders = data;
+                } else {
+                    // Se vier qualquer outra coisa (objeto com mensagem, erro, etc), a fila está vazia
+                    allOrders = [];
+                }
 
-                renderizarFila(); // Renderiza a fila para a aba padrão
+                renderizarFila(); 
                 atualizarContadores();
             } catch (err) {
-                console.error("Erro ao carregar fila:", err);
-                container.innerHTML = `<p class="p-4 text-center text-red-500 font-medium">Falha ao carregar a fila.</p>`;
+                // Em caso de erro total de conexão, também mostramos a fila como vazia (mais limpo)
+                allOrders = [];
+                renderizarFila();
+                atualizarContadores();
+                console.warn("Fila de triagem vazia ou API indisponível.");
             }
         }
 
