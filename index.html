@@ -296,10 +296,10 @@
             pecasAlvo.forEach(peca => {
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-4 bg-white">
-                        <span class="text-slate-800 font-bold text-xs">${peca.name}</span>
+                        <span class="text-slate-800 font-bold text-xs">${peca.item_name}</span>
                         <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="togglePeca('${peca.name}', 'STOCK', this)" class="btn-toggle-stock active text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all">Em Estoque</button>
-                            <button onclick="togglePeca('${peca.name}', 'ORDER', this)" class="btn-toggle-order text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all ml-1">Para Pedir</button>
+                            <button onclick="togglePeca('${peca.item_name}', 'STOCK', this)" class="btn-toggle-stock active text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all">Em Estoque</button>
+                            <button onclick="togglePeca('${peca.item_name}', 'ORDER', this)" class="btn-toggle-order text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all ml-1">Para Pedir</button>
                         </div>
                     </div>
                 `;
