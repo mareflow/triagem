@@ -199,7 +199,7 @@
         let activeTab = 'triage'; // A aba ativa: 'triage' ou 'pending'
 
         // --- Constantes de Status ---
-        const STATUS_AGUARDANDO_TRIAGEM = 'Aprovado para Produção';
+        const STATUS_AGUARDANDO_TRIAGEM = 'Aguardando Triagem';
         const STATUS_AGUARDANDO_PECAS = 'Aguardando Peças';
 
         // --- Inicialização ---
@@ -248,7 +248,7 @@
             if (activeTab === 'triage') {
                 // Filtro mais "permissivo" para evitar erros de digitação no banco
 ordensParaMostrar = allOrders.filter(os => 
-    os.status && os.status.trim().toLowerCase() === STATUS_AGUARDANDO_TRIAGEM.toLowerCase()
+    os.status && os.status.toLowerCase().includes(STATUS_AGUARDANDO_TRIAGEM.toLowerCase())
 );
             } else if (activeTab === 'pending') {
                 ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_PECAS);
