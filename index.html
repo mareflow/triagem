@@ -109,8 +109,30 @@
                 <!-- CONTEÚDO DA TRIAGEM -->
                 <div id="triage-panel" class="hidden flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
                     <div class="flex justify-between items-start mb-6">
-                        <h3 class="text-slate-800 font-extrabold text-xl uppercase">Detalhes da Logística</h3>
-                        <button class="bg-slate-500 text-white text-[10px] font-bold px-3 py-1 rounded uppercase tracking-wider hover:bg-slate-600">Histórico</button>
+                        <h3 class="text-slate-800 font-extrabold text-xl uppercase tracking-tighter">Detalhes da Logística</h3>
+                        <button type="button" id="btn-historico-completo" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">Histórico Completo</button>
+                    </div>
+
+                    <!-- MODAL DE HISTÓRICO COMPLETO (ESPELHO TURBOSUL) -->
+                    <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[110]">
+                        <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
+                            <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
+                                <h3 class="text-xl font-black text-brand-blue uppercase tracking-tighter">Detalhes do Processo</h3>
+                                <button id="close-details-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Nº Orçamento / OS</p><p id="detail-business-id" class="text-lg font-bold text-gray-800">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Modelo</p><p id="detail-model" class="text-gray-800">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Cliente</p><p id="detail-client" class="text-gray-800">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Status Atual</p><span id="detail-status" class="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">--</span></div>
+                            </div>
+
+                            <h4 class="text-sm font-bold text-gray-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
+                            <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4">
+                                <!-- Histórico injetado via JS -->
+                            </div>
+                        </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
@@ -188,9 +210,13 @@
         </div>
     </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
+        const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
-        const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
         // --- Core State ---
@@ -289,6 +315,15 @@ ordensParaMostrar = allOrders.filter(os =>
             document.getElementById('info-cliente').innerText = selecionada.client || '---';
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
+
+            // Ativa o botão de Histórico para a OS selecionada
+            document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
+
+            // Ativa o botão X para fechar o modal
+            document.getElementById('close-details-modal-btn').onclick = () => {
+                document.getElementById('details-modal').classList.add('hidden');
+                document.getElementById('details-modal').classList.remove('flex');
+            };
             document.getElementById('check-analisado').checked = false;
             document.getElementById('obs-triagem').value = "";
 
@@ -365,6 +400,38 @@ ordensParaMostrar = allOrders.filter(os =>
                 </div>`;
         }
         
+		async function showDetailsModalWithHistory(order) {
+            document.getElementById('detail-business-id').textContent = order.business_id;
+            document.getElementById('detail-model').textContent = order.model;
+            document.getElementById('detail-client').textContent = order.client;
+            document.getElementById('detail-status').textContent = order.status;
+
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-gray-400 animate-pulse text-center uppercase font-bold">Buscando rastreio...</p>';
+            
+            document.getElementById('details-modal').classList.remove('hidden');
+            document.getElementById('details-modal').classList.add('flex');
+
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('history_events')
+                    .select('*')
+                    .eq('service_order_id', order.id) 
+                    .order('timestamp', { ascending: true });
+
+                if (!error && events && events.length > 0) {
+                    timeline.innerHTML = events.map(ev => `
+                        <div class="relative pb-3">
+                            <div class="absolute -left-[21px] top-1 w-3 h-3 bg-brand-blue rounded-full border-2 border-white"></div>
+                            <p class="text-sm font-bold text-gray-800 uppercase tracking-tight">${ev.action}</p>
+                            <p class="text-xs text-gray-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                        </div>`).join('');
+                } else {
+                    timeline.innerHTML = '<p class="text-xs text-gray-400 italic text-center uppercase font-bold">Iniciando rastreio...</p>';
+                }
+            } catch (err) { console.error(err); }
+        }
+		
         function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM).length;
             const pendingCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS).length;
