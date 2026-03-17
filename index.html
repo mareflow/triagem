@@ -122,10 +122,26 @@
                             </div>
                             
                             <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
-                                <div><p class="text-gray-500 font-medium uppercase text-xs">Nº Orçamento / OS</p><p id="detail-business-id" class="text-lg font-bold text-gray-800">--</p></div>
-                                <div><p class="text-gray-500 font-medium uppercase text-xs">Modelo</p><p id="detail-model" class="text-gray-800">--</p></div>
-                                <div><p class="text-gray-500 font-medium uppercase text-xs">Cliente</p><p id="detail-client" class="text-gray-800">--</p></div>
-                                <div><p class="text-gray-500 font-medium uppercase text-xs">Status Atual</p><span id="detail-status" class="inline-block bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full font-medium">--</span></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800 leading-tight">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Cliente</p><p id="detail-client" class="text-slate-800 font-bold">--</p></div>
+                                <div><p class="text-gray-500 font-medium uppercase text-xs">Status Atual</p><span id="detail-status" class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">--</span></div>
+                            </div>
+
+                            <!-- O MIOLO QUE FALTAVA -->
+                            <div class="space-y-4 mb-6">
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div><p class="text-gray-400 font-bold uppercase text-[10px]">Grau de Dificuldade</p><p id="detail-difficulty" class="text-gray-800 font-bold">--</p></div>
+                                    <div><p class="text-gray-400 font-bold uppercase text-[10px]">Tipo de Venda</p><p id="detail-trade-in" class="text-gray-800 font-bold">--</p></div>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 font-bold uppercase text-[10px]">Itens Adicionais Identificados</p>
+                                    <ul id="detail-maintenance-extras" class="text-sm list-disc list-inside bg-slate-50 p-3 rounded-lg mt-1 text-gray-800"></ul>
+                                </div>
+                                <div>
+                                    <p class="text-gray-400 font-bold uppercase text-[10px]">Observações Técnicas / Entrada</p>
+                                    <p id="detail-observation" class="text-sm bg-slate-50 p-3 rounded-lg mt-1 italic text-gray-800">--</p>
+                                </div>
                             </div>
 
                             <h4 class="text-sm font-bold text-gray-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
@@ -400,35 +416,45 @@ ordensParaMostrar = allOrders.filter(os =>
                 </div>`;
         }
         
-		async function showDetailsModalWithHistory(order) {
+async function showDetailsModalWithHistory(order) {
+            // 1. Tratamento de Dados
+            const extras = typeof order.maintenance_extras === 'string' ? JSON.parse(order.maintenance_extras) : order.maintenance_extras;
+            const tradeInText = order.is_trade_in ? `Venda à Base de Troca (${order.trade_in_option || 'Pendente'})` : 'Venda Comum';
+
+            // 2. Preenchimento de Campos (Básicos e Adicionais)
             document.getElementById('detail-business-id').textContent = order.business_id;
             document.getElementById('detail-model').textContent = order.model;
             document.getElementById('detail-client').textContent = order.client;
             document.getElementById('detail-status').textContent = order.status;
+            document.getElementById('detail-difficulty').textContent = order.difficulty || '1';
+            document.getElementById('detail-trade-in').textContent = tradeInText;
+            document.getElementById('detail-observation').textContent = order.observation || 'Nenhuma observação registrada.';
+            
+            // 3. Formatar Lista de Extras
+            const listExtras = document.getElementById('detail-maintenance-extras');
+            const labels = { actuator: 'Atuador', geometry: 'Geometria', geometryStem: 'Canote', geometryFlange: 'Flange' };
+            const itemsHtml = Object.entries(extras || {})
+                .filter(([_, val]) => val === true || (val && val.came === true))
+                .map(([key, _]) => `<li class="font-bold text-slate-700">${labels[key] || key}</li>`);
+            listExtras.innerHTML = itemsHtml.length > 0 ? itemsHtml.join('') : '<li class="text-gray-400">Nenhum item adicional.</li>';
 
+            // 4. Buscar Linha do Tempo
             const timeline = document.getElementById('timeline-container');
-            timeline.innerHTML = '<p class="text-xs text-gray-400 animate-pulse text-center uppercase font-bold">Buscando rastreio...</p>';
+            timeline.innerHTML = '<p class="text-xs text-gray-400 animate-pulse text-center">Buscando rastreio...</p>';
             
             document.getElementById('details-modal').classList.remove('hidden');
             document.getElementById('details-modal').classList.add('flex');
 
             try {
-                const { data: events, error } = await supabaseClient
-                    .from('history_events')
-                    .select('*')
-                    .eq('service_order_id', order.id) 
-                    .order('timestamp', { ascending: true });
-
+                const { data: events, error } = await supabaseClient.from('history_events').select('*').eq('service_order_id', order.id).order('timestamp', { ascending: true });
                 if (!error && events && events.length > 0) {
                     timeline.innerHTML = events.map(ev => `
                         <div class="relative pb-3">
                             <div class="absolute -left-[21px] top-1 w-3 h-3 bg-brand-blue rounded-full border-2 border-white"></div>
                             <p class="text-sm font-bold text-gray-800 uppercase tracking-tight">${ev.action}</p>
-                            <p class="text-xs text-gray-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            <p class="text-[10px] text-gray-500 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
                         </div>`).join('');
-                } else {
-                    timeline.innerHTML = '<p class="text-xs text-gray-400 italic text-center uppercase font-bold">Iniciando rastreio...</p>';
-                }
+                } else { timeline.innerHTML = '<p class="text-xs text-gray-400 italic text-center uppercase font-bold">Iniciando rastreio...</p>'; }
             } catch (err) { console.error(err); }
         }
 		
