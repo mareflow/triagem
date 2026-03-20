@@ -421,14 +421,39 @@ ordensParaMostrar = allOrders.filter(os =>
         }
 
         function renderizarPendencias() {
-            document.getElementById('lista-pecas-pendentes').innerHTML = `
-                <div class="bg-white border border-slate-200 rounded-xl p-4 flex items-center justify-between shadow-sm">
-                    <div class="flex items-center">
-                        <div class="w-2 h-2 rounded-full bg-orange-500 mr-3"></div>
-                        <span class="text-slate-700 font-bold text-sm">Peça Pendente (Exemplo)</span>
+            const container = document.getElementById('lista-pecas-pendentes');
+            container.innerHTML = '';
+            
+            // Filtra todas as ordens que estão travadas por falta de peça
+            const ordensComFalta = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS);
+
+            if (ordensComFalta.length === 0) {
+                container.innerHTML = `
+                    <div class="py-20 text-center opacity-40 grayscale">
+                        <i class="fa-solid fa-box-open text-4xl mb-4"></i>
+                        <p class="text-xs font-black uppercase tracking-widest">Nenhuma peça pendente de compra.</p>
+                    </div>`;
+                return;
+            }
+
+            // Mapeia as ordens para a tela
+            ordensComFalta.forEach(os => {
+                container.innerHTML += `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 mb-4 shadow-sm hover:shadow-md transition-all">
+                        <div class="flex justify-between items-center mb-4">
+                            <div>
+                                <span class="text-[10px] font-black text-orange-600 uppercase tracking-widest">Ordem Bloqueada</span>
+                                <h4 class="text-lg font-black text-slate-800">${os.business_id} - ${os.model}</h4>
+                            </div>
+                            <button onclick="selecionarOS('${os.business_id}')" class="bg-slate-800 text-white text-[10px] font-black px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-black transition">Resolver Estoque</button>
+                        </div>
+                        <div class="bg-orange-50 border border-orange-100 rounded-xl p-4">
+                            <p class="text-[10px] font-black text-orange-800 uppercase mb-2">Peças Faltantes:</p>
+                            <p class="text-sm text-orange-700 font-medium italic">Esta OS está aguardando a chegada de componentes para seguir para a oficina.</p>
+                        </div>
                     </div>
-                    <button class="text-green-600 border border-green-200 bg-green-50 text-[10px] font-black px-4 py-1.5 rounded-md uppercase tracking-wider hover:bg-green-100 transition">Marcar como recebido</button>
-                </div>`;
+                `;
+            });
         }
         
 async function showDetailsModalWithHistory(order) {
