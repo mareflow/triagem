@@ -202,14 +202,23 @@
         </section>
     </main>
 
-    <!-- MODAL DE CONFIRMAÇÃO -->
+    <!-- MODAL: DECISÃO LOGÍSTICA (FALTANDO PEÇAS) -->
     <div id="modal-confirm" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl">
-            <h4 class="text-xl font-black text-slate-800 mb-2">Confirmar Liberação?</h4>
-            <p class="text-slate-500 text-sm mb-6 font-medium">Isso moverá a OS para a fila de desmontagem e atualizará o estoque.</p>
-            <div class="flex gap-3">
-                <button onclick="closeModal('modal-confirm')" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition">Cancelar</button>
-                <button onclick="salvarTriagem()" class="flex-1 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition">Sim, Liberar</button>
+        <div class="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl">
+            <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mb-4">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            </div>
+            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight">Decisão de Produção</h4>
+            <p id="modal-confirm-msg" class="text-slate-500 text-sm mb-6 leading-relaxed">Detectamos peças faltantes. Como deseja proceder?</p>
+            
+            <div class="flex flex-col gap-3">
+                <!-- Botão 1: Segue mesmo faltando -->
+                <button onclick="salvarTriagem('Liberado com Pendência')" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100">Seguir com Pendência (Oficina)</button>
+                
+                <!-- Botão 2: Trava a turbina -->
+                <button onclick="salvarTriagem('Aguardando Peças')" class="w-full bg-red-500 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-red-600 transition">Bloquear OS (Falta Peça Crítica)</button>
+                
+                <button onclick="closeModal('modal-confirm')" class="w-full bg-slate-100 text-slate-400 font-bold py-2 rounded-xl text-[10px] uppercase">Voltar e Revisar</button>
             </div>
         </div>
     </div>
@@ -465,24 +474,35 @@ async function showDetailsModalWithHistory(order) {
             document.getElementById('count-pending').innerText = `(${pendingCount})`;
         }
 
-        async function salvarTriagem() {
-            const btn = document.querySelector('#modal-confirm button:last-child');
-            btn.innerText = "Salvando...";
-            btn.disabled = true;
+async function salvarTriagem(statusFinalOverride = null) {
+            const pecasEstado = [];
+            let temFaltante = false;
 
-            const pecasEstado = {};
-            document.querySelectorAll('#lista-pecas > div[class*="flex"]').forEach(div => {
+            document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const name = div.querySelector('span').innerText;
-                const status = div.querySelector('button.active.btn-toggle-stock') ? 'STOCK' : 'ORDER';
-                pecasEstado[name] = status;
+                const isOrder = div.querySelector('button.active').classList.contains('btn-toggle-order');
+                if (isOrder) temFaltante = true;
+                pecasEstado.push({ name, availability: isOrder ? 'ORDER' : 'STOCK' });
             });
 
+            // Lógica de Inteligência: Se tem peça faltante e ainda não abriu o modal de decisão, abre ele.
+            if (temFaltante && !statusFinalOverride) {
+                document.getElementById('modal-confirm-msg').innerText = `Existem peças marcadas "PARA PEDIR". O que deseja fazer com a OS ${selecionada.business_id}?`;
+                document.getElementById('modal-confirm').classList.remove('hidden');
+                document.getElementById('modal-confirm').classList.add('flex');
+                return;
+            }
+
+            // Se não tem peça faltante, o status automático é Liberado
+            const statusFinal = statusFinalOverride || 'Liberado para Desmontagem';
+
             const payload = {
-                os_id: selecionada.id, // Enviando o UUID real para o banco de dados
+                os_id: selecionada.id,
                 user_id: FALLBACK_USER,
+                status: statusFinal,
                 analyzed_sales: document.getElementById('check-analisado').checked,
                 observations: document.getElementById('obs-triagem').value,
-                items_availability: Object.entries(pecasEstado).map(([name, availability]) => ({ name, availability }))
+                items_availability: pecasEstado
             };
 
             try {
@@ -491,12 +511,8 @@ async function showDetailsModalWithHistory(order) {
 
                 closeModal('modal-confirm');
                 document.getElementById('modal-success').classList.remove('hidden');
-                
             } catch (err) {
-                alert("Erro ao salvar triagem: " + err.message);
-            } finally {
-                btn.innerText = "Sim, Liberar";
-                btn.disabled = false;
+                alert("Erro ao salvar: " + err.message);
             }
         }
         
@@ -518,7 +534,8 @@ async function showDetailsModalWithHistory(order) {
 
         function confirmarSalvar() {
             if(!selecionada) return;
-            document.getElementById('modal-confirm').classList.remove('hidden');
+            // Tenta salvar direto; a função agora decide se precisa abrir o modal ou não
+            salvarTriagem();
         }
 
         function logout() {
