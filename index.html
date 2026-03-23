@@ -378,30 +378,31 @@ ordensParaMostrar = allOrders.filter(os =>
             renderizarPecas(selecionada.checklist_geral || []);
         }
 
-        function renderizarPecas(items) {
+function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
             
-            // REGRA TurboSul: Mostra se o TÉCNICO ou o VENDEDOR marcou para ação
-            const pecasAlvo = items.filter(i => 
-                i.status === 'TROCAR' || 
-                i.status === 'RECONDICIONAR' || 
-                i.decisao_vendas === 'TROCAR' || 
-                i.decisao_vendas === 'RECONDICIONAR'
-            );
+            // REGRA TurboSul: Agora o n8n já entrega a lista filtrada por O.S e Veredito.
+            const pecasAlvo = items;
 
-            if(pecasAlvo.length === 0) {
-                container.innerHTML = '<div class="p-4 text-slate-400 text-xs text-center font-bold uppercase italic">Nenhuma peça para trocar/recondicionar</div>';
+            if (!pecasAlvo || pecasAlvo.length === 0) {
+                container.innerHTML = `
+                    <div class="p-8 text-center bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
+                        <p class="text-slate-400 text-[10px] font-black uppercase italic">Nenhum item pendente de estoque/usinagem para esta O.S.</p>
+                    </div>`;
                 return;
             }
 
             pecasAlvo.forEach(peca => {
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 bg-white">
-                        <span class="text-slate-800 font-bold text-xs">${peca.item_name}</span>
-                        <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="togglePeca('${peca.item_name}', 'STOCK', this)" class="btn-toggle-stock active text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all">Em Estoque</button>
-                            <button onclick="togglePeca('${peca.item_name}', 'ORDER', this)" class="btn-toggle-order text-[9px] font-black uppercase tracking-wider px-3 py-1.5 rounded-md transition-all ml-1">Para Pedir</button>
+                    <div class="flex items-center justify-between p-4 bg-white hover:bg-slate-50 transition-colors">
+                        <div class="flex flex-col">
+                            <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${peca.item_name}</span>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase">Veredito Vendas: ${peca.decisao_vendas || 'OK'}</span>
+                        </div>
+                        <div class="flex bg-slate-100 rounded-lg p-1 shadow-inner">
+                            <button onclick="togglePeca('${peca.item_name}', 'STOCK', this)" class="btn-toggle-stock active text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
+                            <button onclick="togglePeca('${peca.item_name}', 'ORDER', this)" class="btn-toggle-order text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
                         </div>
                     </div>
                 `;
