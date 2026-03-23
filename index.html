@@ -77,8 +77,8 @@
             
             <!-- FILTROS RÁPIDOS DA SIDEBAR -->
             <div id="sidebar-filters" class="flex space-x-1 text-[9px] font-bold mb-4">
-                <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600">FILA (ANÁLISE)</button>
-                <button type="button" onclick="setActiveSidebarTab('standby')" id="side-tab-standby" class="flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all">STANDBY</button>
+                <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600">FILA (ANÁLISE) <span id="count-side-triage">(0)</span></button>
+                <button type="button" onclick="setActiveSidebarTab('standby')" id="side-tab-standby" class="flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all">STANDBY <span id="count-side-standby">(0)</span></button>
             </div>
 
             <div id="fila-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
@@ -554,10 +554,24 @@ async function showDetailsModalWithHistory(order) {
         }
 		
         function atualizarContadores() {
-            const triageCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM).length;
-            const pendingCount = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS).length;
-            document.getElementById('count-triage').innerText = `(${triageCount})`;
-            document.getElementById('count-pending').innerText = `(${pendingCount})`;
+            // Contagem para as Abas Superiores
+            const triageCountTotal = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM || o.status === 'Standby').length;
+            const pendingCountTotal = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS).length;
+            
+            // Contagem específica para a Sidebar
+            const triageOnly = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM).length;
+            const standbyOnly = allOrders.filter(o => o.status === 'Standby').length;
+
+            // Injeta nas Abas Superiores
+            document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
+            document.getElementById('count-pending').innerText = `(${pendingCountTotal})`;
+            
+            // Injeta nos filtros da Sidebar
+            const spanSideTriage = document.getElementById('count-side-triage');
+            const spanSideStandby = document.getElementById('count-side-standby');
+            
+            if (spanSideTriage) spanSideTriage.innerText = `(${triageOnly})`;
+            if (spanSideStandby) spanSideStandby.innerText = `(${standbyOnly})`;
         }
 
 async function salvarTriagem(statusFinalOverride = null) {
