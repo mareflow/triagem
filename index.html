@@ -160,6 +160,11 @@
                                     <p class="text-sm font-medium text-slate-500">Cliente: <span id="info-cliente" class="text-slate-800 font-bold ml-1">---</span></p>
                                     <p class="text-sm font-medium text-slate-500">Modelo: <span id="info-modelo" class="text-slate-800 font-bold ml-1">---</span></p>
                                     <p class="text-sm font-medium text-slate-500">OS Gerada: <span id="info-os" class="text-slate-800 font-bold ml-1">---</span></p>
+                                    <p class="text-sm font-medium text-slate-500">Previsão: <span id="info-previsao" class="text-blue-600 font-bold ml-1">---</span></p>
+                                    <div class="flex items-center mt-2">
+                                        <input type="checkbox" id="segunda-hora-check-visual" disabled class="mr-2">
+                                        <span class="text-[10px] font-black text-slate-400 uppercase">Prioridade 2ª Hora</span>
+                                    </div>
                                 </div>
                             </div>
 
@@ -347,6 +352,18 @@ ordensParaMostrar = allOrders.filter(os =>
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
 
+            // MOSTRA A DATA VINDA DE VENDAS (Limpando o formato ISO)
+            const campoPrevisao = document.getElementById('info-previsao');
+            if (campoPrevisao && selecionada.previsao_saida) {
+                campoPrevisao.innerText = selecionada.previsao_saida.split('T')[0];
+            }
+
+            // MARCA O CHECKBOX DE 2ª HORA SE ESTIVER TRUE NO BANCO
+            const check2Hora = document.getElementById('segunda-hora-check-visual'); 
+            if (check2Hora) {
+                check2Hora.checked = selecionada.segunda_hora === true;
+            }
+
             // Ativa o botão de Histórico para a OS selecionada
             document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
 
@@ -365,7 +382,13 @@ ordensParaMostrar = allOrders.filter(os =>
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
             
-            const pecasAlvo = items.filter(i => i.status === 'TROCAR' || i.status === 'RECONDICIONAR');
+            // REGRA TurboSul: Mostra se o TÉCNICO ou o VENDEDOR marcou para ação
+            const pecasAlvo = items.filter(i => 
+                i.status === 'TROCAR' || 
+                i.status === 'RECONDICIONAR' || 
+                i.decisao_vendas === 'TROCAR' || 
+                i.decisao_vendas === 'RECONDICIONAR'
+            );
 
             if(pecasAlvo.length === 0) {
                 container.innerHTML = '<div class="p-4 text-slate-400 text-xs text-center font-bold uppercase italic">Nenhuma peça para trocar/recondicionar</div>';
