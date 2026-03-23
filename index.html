@@ -195,9 +195,9 @@
                         <textarea id="obs-triagem" rows="4" class="obs-input w-full rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Digite observações internas..."></textarea>
                         
                         <div class="flex justify-end pt-4 space-x-3">
-                            <button type="button" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">
-                                Deixar OS em Standby
-                            </button>
+<button type="button" id="btn-standby-action" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">
+    Deixar OS em Standby
+</button>
                             <button type="button" onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">
                                 Liberar para Produção
                             </button>
@@ -352,7 +352,7 @@
 
             ordensParaMostrar.forEach(os => {
                 const urgencyColor = getUrgencyColor(os.urgency);
-                const isActive = selecionada && selecionada.business_id === os.business_id ? 'active border-l-4 border-blue-600 bg-blue-50/50' : 'bg-white border-slate-200';
+                const isActive = selecionada && selecionada.business_id === os.business_id ? 'active border-l-4 border-blue-600 bg-blue-50' : 'bg-white border-slate-200';
                 
                 container.innerHTML += `
                     <div onclick="selecionarOS('${os.business_id}')" id="card-${os.business_id}" class="os-card ${isActive} p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-all group">
@@ -382,8 +382,17 @@
             renderizarFila();
         }
         
-        function selecionarOS(id) {
-            // Buscamos a ordem na lista local pelo business_id para carregar os detalhes na tela
+function selecionarOS(id) {
+            // LÓGICA DE DESELEÇÃO: Se clicar na OS que já está aberta, fecha o painel
+            if (selecionada && selecionada.business_id === id) {
+                selecionada = null;
+                document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active'));
+                document.getElementById('triage-panel').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                return;
+            }
+
+            // Busca a ordem na lista local
             selecionada = allOrders.find(o => o.business_id === id);
             if (!selecionada) return;
 
@@ -392,31 +401,31 @@
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('triage-panel').classList.remove('hidden');
 
-            // CORREÇÃO: Puxa os detalhes corretos do objeto 'selecionada' para o painel.
+            // Preenche dados básicos
             document.getElementById('info-cliente').innerText = selecionada.client || '---';
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
 
-            // MOSTRA A DATA VINDA DE VENDAS (Limpando o formato ISO)
+            // INTELIGÊNCIA DE BOTÃO: Se a OS já está em Standby, esconde o botão de "Deixar em Standby"
+            const btnStandby = document.getElementById('btn-standby-action');
+            if (btnStandby) {
+                if (selecionada.status === 'Standby') {
+                    btnStandby.classList.add('hidden');
+                } else {
+                    btnStandby.classList.remove('hidden');
+                }
+            }
+
+            // Carrega Logística
             const campoPrevisao = document.getElementById('info-previsao');
             if (campoPrevisao && selecionada.previsao_saida) {
                 campoPrevisao.innerText = selecionada.previsao_saida.split('T')[0];
             }
 
-            // MARCA O CHECKBOX DE 2ª HORA SE ESTIVER TRUE NO BANCO
             const check2Hora = document.getElementById('segunda-hora-check-visual'); 
-            if (check2Hora) {
-                check2Hora.checked = selecionada.segunda_hora === true;
-            }
+            if (check2Hora) check2Hora.checked = selecionada.segunda_hora === true;
 
-            // Ativa o botão de Histórico para a OS selecionada
             document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
-
-            // Ativa o botão X para fechar o modal
-            document.getElementById('close-details-modal-btn').onclick = () => {
-                document.getElementById('details-modal').classList.add('hidden');
-                document.getElementById('details-modal').classList.remove('flex');
-            };
             document.getElementById('check-analisado').checked = false;
             document.getElementById('obs-triagem').value = "";
 
