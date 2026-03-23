@@ -77,7 +77,7 @@
             
             <!-- FILTROS RÁPIDOS DA SIDEBAR -->
             <div id="sidebar-filters" class="flex space-x-1 text-[9px] font-bold mb-4">
-                <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-md shadow-blue-100 transition-all">FILA (ANÁLISE)</button>
+                <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600">FILA (ANÁLISE)</button>
                 <button type="button" onclick="setActiveSidebarTab('standby')" id="side-tab-standby" class="flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all">STANDBY</button>
             </div>
 
@@ -262,6 +262,7 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
+        const API_POST = 'https://teste.mareflow.com.br/webhook/orders/update-status';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
         // --- Core State ---
@@ -629,7 +630,7 @@ async function salvarTriagem(statusFinalOverride = null) {
             salvarTriagem();
         }
 
-        async function colocarEmStandby() {
+async function colocarEmStandby() {
             if (!selecionada) return;
 
             // CAPTURA O ESTADO ATUAL DAS PEÇAS NA TELA
@@ -639,51 +640,50 @@ async function salvarTriagem(statusFinalOverride = null) {
                 const isOrder = div.querySelector('button.active').classList.contains('btn-toggle-order');
                 pecasEstado.push({ 
                     item_name: name, 
-                    decisao_vendas: isOrder ? 'TROCAR' : 'OK' // Mapeia para o padrão do banco
+                    decisao_vendas: isOrder ? 'TROCAR' : 'OK' 
                 });
             });
             
             const payload = {
                 os_id: selecionada.id,
                 status: 'Standby',
-                decisions: pecasEstado, // Envia as marcações para salvar no banco
-                action: 'OS COLOCADA EM STANDBY',
-                details: 'Triador pausou o processo e salvou o estado atual do estoque.'
+                decisions: pecasEstado,
+                action: 'OS EM STANDBY',
+                details: 'Triagem pausada. Peças marcadas para rascunho.'
             };
 
             try {
-                const response = await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', { // Usando o mesmo webhook de trava que já tem o loop de salvamento
+                const response = await fetch('https://webhook.mareflow.com.br/webhook/orders/lock-os', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
 
                 if (response.ok) {
-                    alert(`OS ${selecionada.business_id} salva em Standby com as peças marcadas.`);
+                    alert(`OS ${selecionada.business_id} salva em Standby.`);
                     location.reload(); 
                 }
             } catch (err) { console.error(err); }
         }
 
-            try {
-                const response = await fetch('https://teste.mareflow.com.br/webhook/orders/update-status', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
-
-                if (response.ok) {
-                    alert(`OS ${selecionada.business_id} enviada para Standby.`);
-                    carregarDados(); // Recarrega a fila
-                    selecionada = null;
-                    document.getElementById('triage-panel').classList.add('hidden');
-                    document.getElementById('empty-state').classList.remove('hidden');
-                }
-            } catch (err) { console.error(err); }
+        function setActiveSidebarTab(tab) {
+            window.activeSidebarTab = tab;
+            const btnTriage = document.getElementById('side-tab-triage');
+            const btnStandby = document.getElementById('side-tab-standby');
+            
+            if (tab === 'triage') {
+                btnTriage.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600';
+                btnStandby.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
+            } else {
+                btnStandby.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600';
+                btnTriage.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
+            }
+            renderizarFila();
         }
 
         function logout() {
             console.log('Logout acionado.');
+            window.location.href = '/index.html';
         }
     </script>
 </body>
