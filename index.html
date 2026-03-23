@@ -631,11 +631,39 @@ async function salvarTriagem(statusFinalOverride = null) {
 
         async function colocarEmStandby() {
             if (!selecionada) return;
+
+            // CAPTURA O ESTADO ATUAL DAS PEÇAS NA TELA
+            const pecasEstado = [];
+            document.querySelectorAll('#lista-pecas > div').forEach(div => {
+                const name = div.querySelector('span').innerText;
+                const isOrder = div.querySelector('button.active').classList.contains('btn-toggle-order');
+                pecasEstado.push({ 
+                    item_name: name, 
+                    decisao_vendas: isOrder ? 'TROCAR' : 'OK' // Mapeia para o padrão do banco
+                });
+            });
             
             const payload = {
                 os_id: selecionada.id,
-                status: 'Standby'
+                status: 'Standby',
+                decisions: pecasEstado, // Envia as marcações para salvar no banco
+                action: 'OS COLOCADA EM STANDBY',
+                details: 'Triador pausou o processo e salvou o estado atual do estoque.'
             };
+
+            try {
+                const response = await fetch('https://teste.mareflow.com.br/webhook/orders/lock-os', { // Usando o mesmo webhook de trava que já tem o loop de salvamento
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    alert(`OS ${selecionada.business_id} salva em Standby com as peças marcadas.`);
+                    location.reload(); 
+                }
+            } catch (err) { console.error(err); }
+        }
 
             try {
                 const response = await fetch('https://teste.mareflow.com.br/webhook/orders/update-status', {
