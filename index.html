@@ -268,7 +268,7 @@
     </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script>
+    <script>
         const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -294,7 +294,6 @@
                 renderizarFila(); 
                 atualizarContadores();
             } catch (err) {
-                console.error("Erro ao carregar:", err);
                 allOrders = [];
                 renderizarFila();
                 atualizarContadores();
@@ -305,20 +304,15 @@
             const container = document.getElementById('fila-container');
             if (!container) return;
             container.innerHTML = '';
-            
             let ordensParaMostrar = [];
 
             if (activeTab === 'pending') {
                 ordensParaMostrar = allOrders.filter(os => {
-                    const temPecaFaltante = os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER');
-                    return os.status === 'Aguardando Peças' || (os.status === 'Aguardando Desmontagem OS' && temPecaFaltante);
+                    return os.checklist_geral && os.checklist_geral.some(p => p.availability === 'ORDER' && p.is_resolved !== true);
                 });
             } else {
-                if (window.activeSidebarTab === 'triage') {
-                    ordensParaMostrar = allOrders.filter(os => os.status === 'Aguardando Triagem');
-                } else {
-                    ordensParaMostrar = allOrders.filter(os => os.status === 'Standby');
-                }
+                const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
+                ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
             }
             
             if (ordensParaMostrar.length === 0) {
@@ -348,7 +342,6 @@
                 document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
-
             selecionada = allOrders.find(o => o.business_id === id);
             if (!selecionada) return;
 
@@ -363,15 +356,8 @@
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
 
-            const btnStandby = document.getElementById('btn-standby-action');
-            if (btnStandby) {
-                selecionada.status === 'Standby' ? btnStandby.classList.add('hidden') : btnStandby.classList.remove('hidden');
-            }
-
             const campoPrevisao = document.getElementById('info-previsao');
-            if (campoPrevisao && selecionada.previsao_saida) {
-                campoPrevisao.innerText = selecionada.previsao_saida.split('T')[0];
-            }
+            if (campoPrevisao && selecionada.previsao_saida) campoPrevisao.innerText = selecionada.previsao_saida.split('T')[0];
 
             document.getElementById('segunda-hora-check-visual').checked = selecionada.segunda_hora === true;
             document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
@@ -384,7 +370,7 @@
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
             if (!items || items.length === 0) {
-                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic">Nenhum item pendente.</p>';
+                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic">Tudo OK com as peças.</p>';
                 return;
             }
             items.forEach(peca => {
@@ -393,7 +379,7 @@
                     <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${peca.item_name}</span>
-                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Vendas: ${peca.status || 'OK'}</span>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Ref: ${peca.status || 'OK'}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1">
                             <button onclick="togglePeca(this)" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
@@ -438,100 +424,58 @@
         }
 
         function renderizarPendencias() {
-    const container = document.getElementById('lista-pecas-pendentes');
-    container.innerHTML = '';
-    let todasAsPecasFaltantes = [];
-    
-    allOrders.forEach(os => {
-        if (os.checklist_geral) {
-            os.checklist_geral.forEach(p => {
-                // REGRA TurboSul: Só aparece na aba de pendências se:
-                // 1. O status logístico for 'ORDER' (veio da triagem)
-                // 2. E não estiver marcado como 'RESOLVIDO' no banco (is_resolved)
-                if (p.availability === 'ORDER' && p.is_resolved !== true) {
-                    todasAsPecasFaltantes.push({ 
-                        peca: p.item_name, 
-                        os: os.business_id, 
-                        cliente: os.client, 
-                        modelo: os.model,
-                        id_item: p.id // ID único da peça para o botão 'Recebido'
+            const container = document.getElementById('lista-pecas-pendentes');
+            container.innerHTML = '';
+            let pecasFaltantes = [];
+            
+            allOrders.forEach(os => {
+                if (os.checklist_geral) {
+                    os.checklist_geral.forEach(p => {
+                        if (p.availability === 'ORDER' && p.is_resolved !== true) {
+                            pecasFaltantes.push({ peca: p.item_name, os: os.business_id, id_item: p.id });
+                        }
                     });
                 }
             });
-        }
-    });
 
-    if (todasAsPecasFaltantes.length === 0) {
-        container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Nenhuma peça em trânsito.</p></div>`;
-        return;
-    }
-
-    let html = `<div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
-    
-    todasAsPecasFaltantes.forEach(item => {
-        html += `
-            <tr class="hover:bg-blue-50/30 transition-colors group">
-                <td class="px-6 py-4"><span class="text-sm font-black text-slate-800 uppercase tracking-tighter">${item.peca}</span></td>
-                <td class="px-6 py-4"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">${item.os}</span></td>
-                <td class="px-6 py-4 text-center">
-                    <button onclick="marcarComoRecebido('${item.id_item}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md">
-                        Recebido
-                    </button>
-                </td>
-            </tr>`;
-    });
-    html += `</tbody></table></div>`;
-    container.innerHTML = html;
-}
-
-            if (todasAsPecasFaltantes.length === 0) {
-                container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase">Nenhuma peça pendente.</div>`;
+            if (pecasFaltantes.length === 0) {
+                container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase">Nenhuma pendência encontrada.</div>`;
                 return;
             }
 
-            let html = `<div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
-            todasAsPecasFaltantes.forEach(item => {
-                html += `<tr><td class="px-6 py-4"><span class="text-sm font-black text-slate-800 uppercase tracking-tighter">${item.peca}</span></td><td class="px-6 py-4"><span class="text-xs font-bold text-blue-600">${item.os}</span></td><td class="px-6 py-4 text-center"><button disabled class="opacity-30 bg-slate-200 text-slate-500 px-4 py-2 rounded-lg text-[9px] font-black uppercase">Recebido</button></td></tr>`;
+            let html = `<div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th><th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
+            pecasFaltantes.forEach(item => {
+                html += `<tr><td class="px-6 py-4 font-black text-slate-800 text-sm">${item.peca}</td><td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os}</td><td class="px-6 py-4 text-center"><button onclick="marcarRecebido('${item.id_item}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Recebido</button></td></tr>`;
             });
             html += `</tbody></table></div>`;
             container.innerHTML = html;
         }
 
         function atualizarContadores() {
-    const triageCountTotal = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
-    
-    // Conta quantas peças ÚNICAS estão com status 'ORDER' e não resolvidas
-    let countItensPendentes = 0;
-    allOrders.forEach(os => {
-        if (os.checklist_geral) {
-            os.checklist_geral.forEach(p => {
-                if (p.availability === 'ORDER' && p.is_resolved !== true) countItensPendentes++;
+            const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
+            let pendingCount = 0;
+            allOrders.forEach(os => {
+                if (os.checklist_geral) os.checklist_geral.forEach(p => {
+                    if (p.availability === 'ORDER' && p.is_resolved !== true) pendingCount++;
+                });
             });
-        }
-    });
 
-    document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
-    document.getElementById('count-pending').innerText = `(${countItensPendentes})`;
-            
-            document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
-            document.getElementById('count-pending').innerText = `(${pendingCountTotal})`;
-            
-            const spanSideTriage = document.getElementById('count-side-triage');
-            const spanSideStandby = document.getElementById('count-side-standby');
-            if (spanSideTriage) spanSideTriage.innerText = `(${allOrders.filter(o => o.status === 'Aguardando Triagem').length})`;
-            if (spanSideStandby) spanSideStandby.innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
+            document.getElementById('count-triage').innerText = `(${triageCount})`;
+            document.getElementById('count-pending').innerText = `(${pendingCount})`;
+            document.getElementById('count-side-triage').innerText = `(${allOrders.filter(o => o.status === 'Aguardando Triagem').length})`;
+            document.getElementById('count-side-standby').innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
         }
 
         function setActiveSidebarTab(tab) {
             window.activeSidebarTab = tab;
-            const btnTriage = document.getElementById('side-tab-triage');
-            const btnStandby = document.getElementById('side-tab-standby');
+            const btnT = document.getElementById('side-tab-triage');
+            const btnS = document.getElementById('side-tab-standby');
             if (tab === 'triage') {
-                btnTriage.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-md transition-all';
-                btnStandby.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
+                btnT.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all';
+                btnS.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
             } else {
-                btnStandby.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white shadow-md transition-all';
-                btnTriage.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
+                btnS.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all';
+                btnT.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
             }
             renderizarFila();
         }
@@ -548,23 +492,22 @@
             });
 
             if (temFaltante && !statusFinalOverride) {
-                document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> possui itens faltantes. Proceder?`;
+                document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> tem faltantes.`;
                 document.getElementById('modal-confirm').classList.remove('hidden');
                 document.getElementById('modal-confirm').classList.add('flex');
                 return;
             }
 
-            const statusFinal = statusFinalOverride || 'Aguardando Desmontagem OS';
-            const payload = { os_id: selecionada.id, status: statusFinal, observations: document.getElementById('obs-triagem').value, items_availability: pecasEstado };
-
+            const payload = { 
+                os_id: selecionada.id, 
+                status: statusFinalOverride || 'Aguardando Desmontagem OS', 
+                observations: document.getElementById('obs-triagem').value, 
+                items_availability: pecasEstado 
+            };
             try {
-                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) {
-                    document.getElementById('modal-confirm').classList.add('hidden');
-                    document.getElementById('modal-success').classList.remove('hidden');
-                    document.getElementById('modal-success').classList.add('flex');
-                }
-            } catch (err) { console.error(err); }
+                await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                location.reload();
+            } catch (err) { alert("Erro ao salvar."); }
         }
 
         async function colocarEmStandby() {
@@ -572,14 +515,11 @@
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const name = div.querySelector('span').innerText;
-                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
-                pecasEstado.push({ item_name: name, decisao_vendas: isOrder ? 'TROCAR' : 'OK' });
+                pecasEstado.push({ item_name: name, decisao_vendas: div.querySelector('.btn-toggle-order').classList.contains('active') ? 'TROCAR' : 'OK' });
             });
             const payload = { os_id: selecionada.id, status: 'Standby', decisions: pecasEstado, observations: document.getElementById('obs-triagem').value };
-            try {
-                await fetch('https://webhook.mareflow.com.br/webhook/orders/lock-os', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-                location.reload();
-            } catch (err) { console.error(err); }
+            await fetch('https://webhook.mareflow.com.br/webhook/orders/lock-os', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+            location.reload();
         }
 
         async function showDetailsModalWithHistory(order) {
@@ -587,22 +527,21 @@
             document.getElementById('detail-model').textContent = order.model;
             document.getElementById('detail-client').textContent = order.client;
             document.getElementById('detail-status').textContent = order.status;
-            document.getElementById('detail-observation').textContent = order.observation || 'Nenhuma.';
-            const timeline = document.getElementById('timeline-container');
-            timeline.innerHTML = 'Buscando...';
             document.getElementById('details-modal').classList.remove('hidden');
             document.getElementById('details-modal').classList.add('flex');
             const { data: events } = await supabaseClient.from('history_events').select('*').eq('service_order_id', order.id).order('timestamp', { ascending: true });
-            if (events) {
-                timeline.innerHTML = events.map(ev => `<div class="relative pb-3 pl-4 border-l-2 border-blue-100"><p class="text-xs font-bold">${ev.action}</p><p class="text-[9px]">${new Date(ev.timestamp).toLocaleString()}</p></div>`).join('');
-            }
+            const timeline = document.getElementById('timeline-container');
+            if (events) timeline.innerHTML = events.map(ev => `<div class="pb-3 pl-4 border-l-2 border-blue-100"><p class="text-xs font-bold">${ev.action}</p><p class="text-[9px]">${new Date(ev.timestamp).toLocaleString()}</p></div>`).join('');
         }
 
+        function marcarRecebido(id) { alert("Funcionalidade em desenvolvimento para o ID: " + id); }
         function closeModal(id) { location.reload(); }
         function getUrgencyColor(u) { return u === 'Alta' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'; }
         function confirmarSalvar() { salvarTriagem(); }
         function logout() { window.location.href = '/index.html'; }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
     </script>
+</body>
+</html>
 </body>
 </html>
