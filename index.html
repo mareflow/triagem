@@ -335,10 +335,13 @@
             let ordensParaMostrar = [];
 
             if (activeTab === 'pending') {
-                // Aba superior Direita: Pendências
-                ordensParaMostrar = allOrders.filter(os => os.status === STATUS_AGUARDANDO_PECAS);
+                // Filtra OSs que estão bloqueadas OU que seguiram com falta de peça
+                ordensParaMostrar = allOrders.filter(os => {
+                    const temPecaFaltando = os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER');
+                    return os.status === STATUS_AGUARDANDO_PECAS || (os.status === 'Aguardando Desmontagem OS' && temPecaFaltando);
+                });
             } else {
-                // Aba superior Esquerda: Ordens Aprovadas (Depende da Sidebar)
+                // Filtra apenas o que é "puro" para triagem inicial ou rascunho
                 if (window.activeSidebarTab === 'triage') {
                     ordensParaMostrar = allOrders.filter(os => os.status === 'Aguardando Triagem');
                 } else {
