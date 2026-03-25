@@ -366,7 +366,7 @@
             renderizarPecas(selecionada.checklist_geral || []);
         }
 
-        function renderizarPecas(items) {
+function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
             if (!items || items.length === 0) {
@@ -376,7 +376,7 @@
             items.forEach(peca => {
                 const isOrder = peca.decisao_vendas === 'TROCAR' || peca.availability === 'ORDER';
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0">
+                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${peca.item_name}</span>
                             <span class="text-[9px] text-slate-400 font-bold uppercase italic">Ref: ${peca.status || 'OK'}</span>
@@ -480,15 +480,22 @@
             renderizarFila();
         }
 
-        async function salvarTriagem(statusFinalOverride = null) {
+async function salvarTriagem(statusFinalOverride = null) {
             if(!selecionada) return;
             const pecasEstado = [];
             let temFaltante = false;
+
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
+                const idItem = div.getAttribute('data-id');
                 const name = div.querySelector('span').innerText;
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 if (isOrder) temFaltante = true;
-                pecasEstado.push({ name: name, availability: isOrder ? 'ORDER' : 'STOCK' });
+                
+                pecasEstado.push({ 
+                    id: idItem, // Envia o ID para o n8n fazer o UPDATE
+                    name: name, 
+                    availability: isOrder ? 'ORDER' : 'STOCK' 
+                });
             });
 
             if (temFaltante && !statusFinalOverride) {
@@ -505,8 +512,8 @@
                 items_availability: pecasEstado 
             };
             try {
-                await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                location.reload();
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { location.reload(); }
             } catch (err) { alert("Erro ao salvar."); }
         }
 
@@ -541,5 +548,7 @@
         function logout() { window.location.href = '/index.html'; }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
     </script>
+</body>
+</html>
 </body>
 </html>
