@@ -438,18 +438,51 @@
         }
 
         function renderizarPendencias() {
-            const container = document.getElementById('lista-pecas-pendentes');
-            container.innerHTML = '';
-            let todasAsPecasFaltantes = [];
-            allOrders.forEach(os => {
-                if (os.checklist_geral) {
-                    os.checklist_geral.forEach(p => {
-                        if (p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER') {
-                            todasAsPecasFaltantes.push({ peca: p.item_name, os: os.business_id, cliente: os.client, modelo: os.model });
-                        }
+    const container = document.getElementById('lista-pecas-pendentes');
+    container.innerHTML = '';
+    let todasAsPecasFaltantes = [];
+    
+    allOrders.forEach(os => {
+        if (os.checklist_geral) {
+            os.checklist_geral.forEach(p => {
+                // REGRA TurboSul: Só aparece na aba de pendências se:
+                // 1. O status logístico for 'ORDER' (veio da triagem)
+                // 2. E não estiver marcado como 'RESOLVIDO' no banco (is_resolved)
+                if (p.availability === 'ORDER' && p.is_resolved !== true) {
+                    todasAsPecasFaltantes.push({ 
+                        peca: p.item_name, 
+                        os: os.business_id, 
+                        cliente: os.client, 
+                        modelo: os.model,
+                        id_item: p.id // ID único da peça para o botão 'Recebido'
                     });
                 }
             });
+        }
+    });
+
+    if (todasAsPecasFaltantes.length === 0) {
+        container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Nenhuma peça em trânsito.</p></div>`;
+        return;
+    }
+
+    let html = `<div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
+    
+    todasAsPecasFaltantes.forEach(item => {
+        html += `
+            <tr class="hover:bg-blue-50/30 transition-colors group">
+                <td class="px-6 py-4"><span class="text-sm font-black text-slate-800 uppercase tracking-tighter">${item.peca}</span></td>
+                <td class="px-6 py-4"><span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">${item.os}</span></td>
+                <td class="px-6 py-4 text-center">
+                    <button onclick="marcarComoRecebido('${item.id_item}')" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all shadow-md">
+                        Recebido
+                    </button>
+                </td>
+            </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+}
 
             if (todasAsPecasFaltantes.length === 0) {
                 container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase">Nenhuma peça pendente.</div>`;
@@ -465,8 +498,20 @@
         }
 
         function atualizarContadores() {
-            const triageCountTotal = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
-            const pendingCountTotal = allOrders.filter(os => os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER')).length;
+    const triageCountTotal = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
+    
+    // Conta quantas peças ÚNICAS estão com status 'ORDER' e não resolvidas
+    let countItensPendentes = 0;
+    allOrders.forEach(os => {
+        if (os.checklist_geral) {
+            os.checklist_geral.forEach(p => {
+                if (p.availability === 'ORDER' && p.is_resolved !== true) countItensPendentes++;
+            });
+        }
+    });
+
+    document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
+    document.getElementById('count-pending').innerText = `(${countItensPendentes})`;
             
             document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
             document.getElementById('count-pending').innerText = `(${pendingCountTotal})`;
