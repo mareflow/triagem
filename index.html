@@ -504,33 +504,70 @@ function renderizarPendencias() {
     const container = document.getElementById('lista-pecas-pendentes');
     container.innerHTML = '';
     
-    // Filtra OSs que estão 'Aguardando Peças' (Bloqueadas) 
-    // OU que estão na oficina mas têm peças 'Para Pedir'
-    const ordensComFalta = allOrders.filter(os => {
-        const temPecaParaPedir = os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR');
-        return os.status === 'Aguardando Peças' || (os.status === 'Aguardando Desmontagem OS' && temPecaParaPedir);
+    // Coletamos todas as peças de todas as OSs que precisam ser pedidas
+    let todasAsPecasFaltantes = [];
+    
+    allOrders.forEach(os => {
+        if (os.checklist_geral) {
+            os.checklist_geral.forEach(p => {
+                if (p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER') {
+                    todasAsPecasFaltantes.push({
+                        peca: p.item_name,
+                        os: os.business_id,
+                        cliente: os.client,
+                        modelo: os.model
+                    });
+                }
+            });
+        }
     });
 
-    if (ordensComFalta.length === 0) {
-        container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><svg class="w-20 h-20 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Tudo em dia com o estoque.</p></div>`;
+    if (todasAsPecasFaltantes.length === 0) {
+        container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><svg class="w-20 h-20 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Nenhuma peça pendente.</p></div>`;
         return;
     }
 
-    ordensComFalta.forEach(os => {
-        const itensTexto = os.checklist_geral
-            .filter(p => p.decisao_vendas === 'TROCAR')
-            .map(p => p.item_name).join(', ');
+    // Estrutura de Tabela
+    let html = `
+        <div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-slate-50 border-b border-slate-100">
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
+                        <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Ação</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+    `;
 
-        container.innerHTML += `
-            <div class="bg-white border-2 border-red-100 rounded-3xl p-8 mb-6 shadow-sm flex justify-between items-center group hover:border-red-500 transition-all">
-                <div>
-                    <span class="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full mb-3 inline-block">Faltante: ${itensTexto || 'Peça Crítica'}</span>
-                    <h4 class="text-2xl font-black text-slate-800 tracking-tighter">${os.business_id}</h4>
-                    <p class="text-slate-500 font-medium">${os.client} | <span class="font-bold text-slate-700">${os.model}</span></p>
-                </div>
-                <button onclick="selecionarOS('${os.business_id}'); switchTab('triage')" class="bg-slate-900 text-white font-black px-8 py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-red-600 transition shadow-xl shadow-slate-200">Verificar Peças</button>
-            </div>`;
+    todasAsPecasFaltantes.forEach(item => {
+        html += `
+            <tr class="hover:bg-blue-50/30 transition-colors group">
+                <td class="px-6 py-4">
+                    <span class="text-sm font-black text-slate-800 uppercase tracking-tighter">${item.peca}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-md border border-blue-100">${item.os}</span>
+                </td>
+                <td class="px-6 py-4">
+                    <div class="flex flex-col">
+                        <span class="text-[11px] font-bold text-slate-700">${item.cliente}</span>
+                        <span class="text-[10px] text-slate-400 font-medium">${item.modelo}</span>
+                    </div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <button disabled class="opacity-30 bg-slate-200 text-slate-500 cursor-not-allowed px-4 py-2 rounded-lg text-[9px] font-black uppercase tracking-widest">
+                        Recebido
+                    </button>
+                </td>
+            </tr>
+        `;
     });
+
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
 }
         
 async function showDetailsModalWithHistory(order) {
@@ -576,17 +613,27 @@ async function showDetailsModalWithHistory(order) {
         }
 		
         function atualizarContadores() {
-            // Contagem para as Abas Superiores
-            const triageCountTotal = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM || o.status === 'Standby').length;
-            const pendingCountTotal = allOrders.filter(o => o.status === STATUS_AGUARDANDO_PECAS).length;
-            
-            // Contagem específica para a Sidebar
-            const triageOnly = allOrders.filter(o => o.status === STATUS_AGUARDANDO_TRIAGEM).length;
-            const standbyOnly = allOrders.filter(o => o.status === 'Standby').length;
+    // 1. Contagem para Triagem (Fila de Análise + Standby)
+    const triageCountTotal = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
 
-            // Injeta nas Abas Superiores
-            document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
-            document.getElementById('count-pending').innerText = `(${pendingCountTotal})`;
+    // 2. Contagem para Pendências (Contamos OSs que têm pelo menos uma peça "ORDER" ou "TROCAR")
+    const pendingCountTotal = allOrders.filter(os => {
+        return os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR' || p.availability === 'ORDER');
+    }).length;
+    
+    // 3. Contagem específica para a Sidebar (Fila vs Standby)
+    const triageOnly = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
+    const standbyOnly = allOrders.filter(o => o.status === 'Standby').length;
+
+    // Injeta os valores no HTML
+    document.getElementById('count-triage').innerText = `(${triageCountTotal})`;
+    document.getElementById('count-pending').innerText = `(${pendingCountTotal})`;
+    
+    const spanSideTriage = document.getElementById('count-side-triage');
+    const spanSideStandby = document.getElementById('count-side-standby');
+    if (spanSideTriage) spanSideTriage.innerText = `(${triageOnly})`;
+    if (spanSideStandby) spanSideStandby.innerText = `(${standbyOnly})`;
+}
             
             // Injeta nos filtros da Sidebar
             const spanSideTriage = document.getElementById('count-side-triage');
