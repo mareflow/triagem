@@ -236,7 +236,7 @@
             <p id="modal-confirm-msg" class="text-slate-500 text-sm mb-6 leading-relaxed text-center italic">Detectamos peças faltantes. Como deseja proceder com esta Ordem de Serviço?</p>
             
             <div class="flex flex-col gap-3">
-                <button onclick="salvarTriagem('Liberado com Pendência')" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100">Seguir com Pendência (Ir p/ Oficina)</button>
+                <button onclick="salvarTriagem('Aguardando Desmontagem OS')" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100">Seguir com Pendência (Ir p/ Oficina)</button>
                 <button onclick="salvarTriagem('Aguardando Peças')" class="w-full bg-red-500 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-red-600 transition">Bloquear OS (Falta Peça Crítica)</button>
                 <button onclick="document.getElementById('modal-confirm').classList.add('hidden')" class="w-full bg-slate-100 text-slate-400 font-bold py-2 rounded-xl text-[10px] uppercase">Voltar e Revisar Estoque</button>
             </div>
@@ -274,7 +274,8 @@
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
-        const API_POST = 'https://teste.mareflow.com.br/webhook/orders/update-status';
+        // Ajustado para o endpoint exato do seu n8n
+        const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
         // --- Core State ---
@@ -497,28 +498,37 @@ function switchTab(type) {
         }
 
 function renderizarPendencias() {
-            const container = document.getElementById('lista-pecas-pendentes');
-            container.innerHTML = '';
-            
-            const ordensComFalta = allOrders.filter(o => o.status === 'Aguardando Peças');
+    const container = document.getElementById('lista-pecas-pendentes');
+    container.innerHTML = '';
+    
+    // Filtra OSs que estão 'Aguardando Peças' (Bloqueadas) 
+    // OU que estão na oficina mas têm peças 'Para Pedir'
+    const ordensComFalta = allOrders.filter(os => {
+        const temPecaParaPedir = os.checklist_geral && os.checklist_geral.some(p => p.decisao_vendas === 'TROCAR');
+        return os.status === 'Aguardando Peças' || (os.status === 'Aguardando Desmontagem OS' && temPecaParaPedir);
+    });
 
-            if (ordensComFalta.length === 0) {
-                container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><svg class="w-20 h-20 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Tudo em dia com o estoque.</p></div>`;
-                return;
-            }
+    if (ordensComFalta.length === 0) {
+        container.innerHTML = `<div class="py-40 text-center opacity-40 grayscale flex flex-col items-center"><svg class="w-20 h-20 mb-4 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg><p class="text-sm font-black uppercase tracking-[0.2em] text-slate-400">Tudo em dia com o estoque.</p></div>`;
+        return;
+    }
 
-            ordensComFalta.forEach(os => {
-                container.innerHTML += `
-                    <div class="bg-white border-2 border-red-100 rounded-3xl p-8 mb-6 shadow-sm flex justify-between items-center group hover:border-red-500 transition-all">
-                        <div>
-                            <span class="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full mb-3 inline-block animate-pulse">Falta Peça Crítica</span>
-                            <h4 class="text-2xl font-black text-slate-800 tracking-tighter">${os.business_id}</h4>
-                            <p class="text-slate-500 font-medium">${os.client} | <span class="font-bold text-slate-700">${os.model}</span></p>
-                        </div>
-                        <button onclick="selecionarOS('${os.business_id}'); switchTab('triage')" class="bg-slate-900 text-white font-black px-8 py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-red-600 transition shadow-xl shadow-slate-200">Verificar Chegada</button>
-                    </div>`;
-            });
-        }
+    ordensComFalta.forEach(os => {
+        const itensTexto = os.checklist_geral
+            .filter(p => p.decisao_vendas === 'TROCAR')
+            .map(p => p.item_name).join(', ');
+
+        container.innerHTML += `
+            <div class="bg-white border-2 border-red-100 rounded-3xl p-8 mb-6 shadow-sm flex justify-between items-center group hover:border-red-500 transition-all">
+                <div>
+                    <span class="text-[10px] font-black text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1 rounded-full mb-3 inline-block">Faltante: ${itensTexto || 'Peça Crítica'}</span>
+                    <h4 class="text-2xl font-black text-slate-800 tracking-tighter">${os.business_id}</h4>
+                    <p class="text-slate-500 font-medium">${os.client} | <span class="font-bold text-slate-700">${os.model}</span></p>
+                </div>
+                <button onclick="selecionarOS('${os.business_id}'); switchTab('triage')" class="bg-slate-900 text-white font-black px-8 py-4 rounded-2xl uppercase text-xs tracking-widest hover:bg-red-600 transition shadow-xl shadow-slate-200">Verificar Peças</button>
+            </div>`;
+    });
+}
         
 async function showDetailsModalWithHistory(order) {
             // 1. Tratamento de Dados
@@ -584,49 +594,62 @@ async function showDetailsModalWithHistory(order) {
         }
 
 async function salvarTriagem(statusFinalOverride = null) {
-            const pecasEstado = [];
-            let temFaltante = false;
+    const pecasEstado = [];
+    let temFaltante = false;
 
-            // Varre a lista de peças e identifica se alguma está marcada como "Para Pedir"
-            document.querySelectorAll('#lista-pecas > div[class*="flex"]').forEach(div => {
-                const name = div.querySelector('span').innerText;
-                const isOrder = div.querySelector('button.active').classList.contains('btn-toggle-order');
-                if (isOrder) temFaltante = true;
-                pecasEstado.push({ name, availability: isOrder ? 'ORDER' : 'STOCK' });
-            });
+    // Localiza os itens de peças dentro do container
+    document.querySelectorAll('#lista-pecas > div').forEach(div => {
+        const spanNome = div.querySelector('span');
+        if (!spanNome) return;
+        
+        const name = spanNome.innerText;
+        // Verifica se o botão "Para Pedir" está ativo
+        const btnOrder = div.querySelector('.btn-toggle-order');
+        const isOrder = btnOrder && btnOrder.classList.contains('active');
+        
+        if (isOrder) temFaltante = true;
+        
+        pecasEstado.push({ 
+            name: name, 
+            availability: isOrder ? 'ORDER' : 'STOCK' 
+        });
+    });
 
-            // GATILHO DE INTELIGÊNCIA: Se tem falta e o gestor ainda não clicou nos botões do modal, abre ele.
-            if (temFaltante && !statusFinalOverride) {
-                document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> possui itens marcados como <span class="text-red-600 font-black uppercase">Para Pedir</span>. Como deseja proceder?`;
-                document.getElementById('modal-confirm').classList.remove('hidden');
-                document.getElementById('modal-confirm').classList.add('flex');
-                return;
-            }
+    // Se tem falta e o gestor ainda não decidiu no modal...
+    if (temFaltante && !statusFinalOverride) {
+        document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> possui itens marcados como <span class="text-red-600 font-black uppercase">Para Pedir</span>. Como deseja proceder?`;
+        document.getElementById('modal-confirm').classList.remove('hidden');
+        document.getElementById('modal-confirm').classList.add('flex');
+        return;
+    }
 
-            // Define o status final: Se tudo verde -> Liberado. Se tem falta -> O que foi escolhido no modal.
-            const statusFinal = statusFinalOverride || 'Liberado para Desmontagem';
+    // O status final deve ser 'Aguardando Desmontagem OS' para o seu n8n processar
+    const statusFinal = statusFinalOverride || 'Aguardando Desmontagem OS';
 
-            const payload = {
-                os_id: selecionada.id, // Envia o UUID real
-                user_id: FALLBACK_USER,
-                status: statusFinal,
-                analyzed_sales: document.getElementById('check-analisado').checked,
-                observations: document.getElementById('obs-triagem').value,
-                items_availability: pecasEstado
-            };
+    const payload = {
+        os_id: selecionada.id,
+        user_id: FALLBACK_USER,
+        status: statusFinal,
+        observations: document.getElementById('obs-triagem').value,
+        items_availability: pecasEstado
+    };
 
-            try {
-                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (!res.ok) throw new Error(await res.text());
+    try {
+        const res = await fetch(API_POST, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
+        
+        if (!res.ok) throw new Error("Erro na comunicação com o servidor");
 
-                // Limpa modais e mostra tela de sucesso
-                document.getElementById('modal-confirm').classList.add('hidden');
-                document.getElementById('modal-success').classList.remove('hidden');
-                document.getElementById('modal-success').classList.add('flex');
-            } catch (err) {
-                alert("Erro ao processar triagem: " + err.message);
-            }
-        }
+        document.getElementById('modal-confirm').classList.add('hidden');
+        document.getElementById('modal-success').classList.remove('hidden');
+        document.getElementById('modal-success').classList.add('flex');
+    } catch (err) {
+        alert("Erro ao salvar triagem: " + err.message);
+    }
+}
         
         function closeModal(id) {
             document.getElementById(id).classList.add('hidden');
