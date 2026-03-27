@@ -453,13 +453,14 @@ function renderizarPecas(items) {
             renderizarFila();
         }
 
-        function renderizarPendencias() {
+function renderizarPendencias() {
             const container = document.getElementById('lista-pecas-pendentes');
             container.innerHTML = '';
             let pecasFaltantes = [];
             
             allOrders.forEach(os => {
-                if (os.checklist_geral) {
+                // REGRA TURBOSUL: Só mostra pendência se a OS NÃO estiver em Standby
+                if (os.checklist_geral && os.status !== 'Standby') { 
                     os.checklist_geral.forEach(p => {
                         if (p.availability === 'ORDER' && p.is_resolved !== true) {
                             pecasFaltantes.push({ peca: p.item_name, os: os.business_id, id_item: p.id });
@@ -514,15 +515,14 @@ function renderizarPecas(items) {
             renderizarFila();
         }
 
-async function salvarTriagem(statusFinalOverride = null) {
-            if(!selecionada) return;
+// FUNÇÃO AUXILIAR PARA COLETAR O ESTADO ATUAL DAS PEÇAS NA TELA
+        function coletarEstadoDasPecas() {
             const pecasEstado = [];
             let temFaltante = false;
 
-            // Percorre as peças uma única vez (Loop Corrigido)
-            document.querySelectorAll('#lista-pecas > div').forEach(div => {
+            document.querySelectorAll('#lista-pecas > div[data-name]').forEach(div => {
                 const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name'); // Pega o nome direto do atributo
+                const name = div.getAttribute('data-name');
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 
                 if (isOrder) temFaltante = true;
@@ -533,11 +533,16 @@ async function salvarTriagem(statusFinalOverride = null) {
                     availability: isOrder ? 'ORDER' : 'STOCK' 
                 });
             });
+            return { pecasEstado, temFaltante };
+        }
+
+        async function salvarTriagem(statusFinalOverride = null) {
+            if(!selecionada) return;
+            const { pecasEstado, temFaltante } = coletarEstadoDasPecas();
 
             if (temFaltante && !statusFinalOverride) {
                 document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> tem faltantes.`;
-                document.getElementById('modal-confirm').classList.remove('hidden');
-                document.getElementById('modal-confirm').classList.add('flex');
+                document.getElementById('modal-confirm').classList.remove('hidden').add('flex');
                 return;
             }
 
@@ -545,49 +550,34 @@ async function salvarTriagem(statusFinalOverride = null) {
                 os_id: selecionada.id, 
                 status: statusFinalOverride || 'Aguardando Desmontagem OS', 
                 observations: document.getElementById('obs-triagem').value, 
-                items_availability: pecasEstado 
+                items_availability: pecasEstado,
+                user_id: USER_ID
             };
 
-            try {
-                const res = await fetch(API_POST, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
-                });
-                if (res.ok) { location.reload(); }
-            } catch (err) { alert("Erro ao salvar triagem."); }
+            const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) location.reload();
         }
 
-async function colocarEmStandby() {
+        async function colocarEmStandby() {
             if (!selecionada) return;
+            const { pecasEstado } = coletarEstadoDasPecas();
             const btn = document.getElementById('btn-standby-action');
-            btn.disabled = true;
-            btn.innerText = "SALVANDO...";
-
-            const pecasEstado = [];
-            document.querySelectorAll('#lista-pecas > div').forEach(div => {
-                pecasEstado.push({ 
-                    id: div.getAttribute('data-id'), 
-                    name: div.getAttribute('data-name'), // Nome padronizado
-                    availability: div.querySelector('.btn-toggle-order').classList.contains('active') ? 'ORDER' : 'STOCK' 
-                });
-            });
+            btn.disabled = true; btn.innerText = "SALVANDO...";
 
             const payload = { 
                 os_id: selecionada.id, 
                 status: 'Standby', 
                 observations: document.getElementById('obs-triagem').value, 
-                items_availability: pecasEstado 
+                items_availability: pecasEstado,
+                user_id: USER_ID
             };
 
-            try {
-                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-                if (res.ok) { 
-                    document.getElementById('modal-status-msg').innerText = "OS em Standby. Peças preservadas.";
-                    document.getElementById('modal-status-standby').classList.remove('hidden');
-                    document.getElementById('modal-status-standby').classList.add('flex');
-                }
-            } catch (err) { alert("Erro."); btn.disabled = false; }
+            const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            if (res.ok) {
+                document.getElementById('modal-status-msg').innerText = "OS em Standby. Estado das peças preservado.";
+                document.getElementById('modal-status-standby').classList.remove('hidden');
+                document.getElementById('modal-status-standby').classList.add('flex');
+            }
         }
 
         async function liberarDeStandby() {
