@@ -206,7 +206,7 @@
                 </div>
 
                 <!-- PAINEL PENDÊNCIAS (Visual Simples conforme imagem) -->
-                <div id="pending-panel" class="hidden flex-1 p-8">
+                <div id="pending-panel" class="hidden flex-1 p-8 overflow-y-auto custom-scrollbar">
                     <h3 class="text-orange-600 font-black text-lg uppercase tracking-wider mb-6">Pendências de Peças</h3>
                     <div id="lista-pecas-pendentes" class="space-y-4">
                         <!-- Itens pendentes -->
@@ -473,7 +473,11 @@ function renderizarPecas(items) {
                 return;
             }
 
-            let html = `<div class="overflow-x-auto rounded-2xl border border-slate-100 shadow-sm"><table class="w-full text-left border-collapse"><thead><tr class="bg-slate-50 border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th><th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
+            // Janela de visualização com altura fixa para permitir rolagem de muitos itens
+            let html = `<div class="overflow-y-auto max-h-[calc(100vh-250px)] rounded-2xl border border-slate-100 shadow-sm custom-scrollbar">
+                        <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                        <tr class="border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th><th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
             pecasFaltantes.forEach(item => {
                 html += `<tr><td class="px-6 py-4 font-black text-slate-800 text-sm">${item.peca}</td><td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os}</td><td class="px-6 py-4 text-center"><button onclick="marcarRecebido('${item.id_item}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Recebido</button></td></tr>`;
             });
