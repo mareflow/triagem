@@ -116,7 +116,9 @@
                 <div id="triage-panel" class="hidden flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
                     <div class="flex justify-between items-start mb-6">
                         <h3 class="text-slate-800 font-extrabold text-xl uppercase tracking-tighter">Detalhes da Logística</h3>
-                        <button type="button" id="btn-historico-completo" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">Histórico Completo</button>
+                        <button type="button" onclick="carregarLinhaDoTempo()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">
+    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico Completo
+</button>
                     </div>
 
                     <!-- MODAL DE HISTÓRICO COMPLETO -->
@@ -540,40 +542,64 @@
             if (res.ok) location.reload();
         }
 
-        async function showDetailsModalWithHistory(order) {
-            document.getElementById('detail-business-id').textContent = order.business_id;
-            document.getElementById('detail-model').textContent = order.model;
-            document.getElementById('detail-client').textContent = order.client;
-            document.getElementById('detail-status').textContent = order.status;
-            
-            // Novos campos detalhados
-            document.getElementById('detail-difficulty').textContent = order.difficulty_grade || 'Normal';
-            document.getElementById('detail-trade-in').textContent = order.trade_in === 'Sim' ? 'Base de Troca' : 'Venda Direta / Conserto';
-            document.getElementById('detail-observation').textContent = order.entry_observations || 'Nenhuma observação informada.';
-            
-            const listExtras = document.getElementById('detail-maintenance-extras');
-            listExtras.innerHTML = '';
-            if (order.maintenance_extras && order.maintenance_extras.length > 0) {
-                order.maintenance_extras.forEach(item => {
-                    const li = document.createElement('li');
-                    li.textContent = item;
-                    listExtras.appendChild(li);
-                });
-            } else {
-                listExtras.innerHTML = '<span class="text-gray-400 italic">Nenhum item adicional.</span>';
+// --- FUNÇÃO DE HISTÓRICO UNÍSSONA (TRIAGEM) ---
+        async function carregarLinhaDoTempo() {
+            if (!selecionada) {
+                alert("Selecione uma OS primeiro.");
+                return;
             }
 
+            const os = selecionada;
+            
+            // Preenchimento do cabeçalho do modal
+            document.getElementById('detail-business-id').textContent = os.business_id;
+            document.getElementById('detail-model').textContent = os.model;
+            document.getElementById('detail-client').textContent = os.client;
+            document.getElementById('detail-status').textContent = os.status;
+            
+            // Correção de Colunas: Lê o que realmente vem do Supabase
+            document.getElementById('detail-difficulty').textContent = os.difficulty || '1';
+            document.getElementById('detail-trade-in').textContent = os.is_trade_in ? `Troca (${os.trade_in_option})` : 'Venda Comum';
+            document.getElementById('detail-observation').textContent = os.observation || 'Sem observações técnicas.';
+            
+            // Tratamento de Itens Adicionais (Atuador, etc)
+            const listExtras = document.getElementById('detail-maintenance-extras');
+            try {
+                let extras = os.maintenance_extras;
+                if (typeof extras === 'string') extras = JSON.parse(extras);
+                listExtras.innerHTML = formatMaintenanceExtras(extras);
+            } catch (e) {
+                listExtras.innerHTML = '<li class="text-gray-400">Nenhum item adicional.</li>';
+            }
+
+            // Busca da Timeline no banco
+            const timeline = document.getElementById('timeline-container');
+            timeline.innerHTML = '<p class="text-xs text-blue-500 animate-pulse text-center py-4 uppercase font-bold">Buscando rastreio...</p>';
+            
             document.getElementById('details-modal').classList.remove('hidden');
             document.getElementById('details-modal').classList.add('flex');
             
-            const { data: events } = await supabaseClient.from('history_events').select('*').eq('service_order_id', order.id).order('timestamp', { ascending: true });
-            const timeline = document.getElementById('timeline-container');
-            if (events) {
-                timeline.innerHTML = events.map(ev => `
-                    <div class="pb-3 pl-4 border-l-2 border-blue-100">
-                        <p class="text-xs font-bold uppercase text-slate-700">${ev.action}</p>
-                        <p class="text-[9px] text-slate-400 font-medium">${new Date(ev.timestamp).toLocaleString()}</p>
-                    </div>`).join('');
+            try {
+                const { data: events, error } = await supabaseClient
+                    .from('history_events')
+                    .select('*')
+                    .eq('service_order_id', os.id)
+                    .order('timestamp', { ascending: true });
+
+                if (events && events.length > 0) {
+                    timeline.innerHTML = events.map(ev => `
+                        <div class="relative pb-4 border-l-2 border-blue-100 pl-4 ml-2">
+                            <div class="absolute -left-[9px] top-1 w-4 h-4 bg-blue-600 rounded-full border-2 border-white"></div>
+                            <p class="text-[11px] font-black text-slate-800 uppercase tracking-tight">${ev.action}</p>
+                            <p class="text-[10px] text-slate-400 font-medium">${new Date(ev.timestamp).toLocaleString('pt-BR')}</p>
+                            ${ev.details ? `<p class="text-[9px] text-blue-700 italic mt-1 font-bold">"${ev.details}"</p>` : ''}
+                        </div>`).join('');
+                } else {
+                    timeline.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center uppercase">Iniciando histórico...</p>';
+                }
+            } catch (err) {
+                console.error(err);
+                timeline.innerHTML = '<p class="text-xs text-red-500 text-center font-bold">ERRO AO CARREGAR.</p>';
             }
         }
 
