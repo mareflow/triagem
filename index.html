@@ -408,8 +408,8 @@ function renderizarPecas(items) {
                 // Se não houver nada na Triagem, usa a sugestão de Vendas (decisao_vendas)
                 const isOrder = peca.availability ? (peca.availability === 'ORDER') : (peca.decisao_vendas === 'TROCAR');
 
-                container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}">
+container.innerHTML += `
+    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
                             <span class="text-[9px] text-slate-400 font-bold uppercase italic">Laudo Técnico: ${peca.status || 'OK'}</span>
@@ -518,17 +518,25 @@ async function salvarTriagem(statusFinalOverride = null) {
             const pecasEstado = [];
             let temFaltante = false;
 
-            document.querySelectorAll('#lista-pecas > div').forEach(div => {
+document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
-                const name = div.querySelector('span').innerText;
+                const name = div.getAttribute('data-name'); 
+                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
+                if (isOrder) temFaltante = true;
+                
+                document.querySelectorAll('#lista-pecas > div').forEach(div => {
+                const idItem = div.getAttribute('data-id');
+                // Captura o nome da peça dentro do span
+                const name = div.querySelector('span').innerText; 
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 if (isOrder) temFaltante = true;
                 
                 pecasEstado.push({ 
-                    id: idItem, // Envia o ID para o n8n fazer o UPDATE
-                    name: name, 
+                    id: idItem, 
+                    name: name, // Agora o nome vai preenchido
                     availability: isOrder ? 'ORDER' : 'STOCK' 
                 });
+            });
             });
 
             if (temFaltante && !statusFinalOverride) {
@@ -605,8 +613,13 @@ async function salvarTriagem(statusFinalOverride = null) {
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
+                const name = div.querySelector('span').innerText; // Captura o nome
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
-                pecasEstado.push({ id: idItem, availability: isOrder ? 'ORDER' : 'STOCK' });
+                pecasEstado.push({ 
+                    id: idItem, 
+                    name: name, // O n8n precisa disso para o campo part_name
+                    availability: isOrder ? 'ORDER' : 'STOCK' 
+                });
             });
 
             const payload = { 
