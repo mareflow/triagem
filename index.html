@@ -470,8 +470,11 @@
             container.innerHTML = html;
         }
 
+        // --- ATUALIZAR CONTADORES COM FILTRO STANDBY ---
         function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
+            const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
+            
             let pendingCount = 0;
             allOrders.forEach(os => {
                 const estaNaProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
@@ -485,7 +488,7 @@
             document.getElementById('count-triage').innerText = `(${triageCount})`;
             document.getElementById('count-pending').innerText = `(${pendingCount})`;
             document.getElementById('count-side-triage').innerText = `(${triageCount})`;
-            document.getElementById('count-side-standby').innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
+            document.getElementById('count-side-standby').innerText = `(${standbyCount})`;
         }
 
         function coletarDadosDasPecas() {
@@ -501,7 +504,6 @@
             return { pecasEstado, temFaltante };
         }
 
-        // --- FUNÇÕES DE AÇÃO BLINDADAS ---
         async function salvarTriagem(statusFinalOverride = null) {
             if(!selecionada) return;
             const { pecasEstado, temFaltante } = coletarDadosDasPecas();
@@ -570,7 +572,6 @@
             } catch (err) { alert("Erro ao retornar."); }
         }
 
-        // --- FUNÇÃO DE HISTÓRICO ---
         async function carregarLinhaDoTempo() {
             if (!selecionada) {
                 alert("Selecione uma OS primeiro.");
@@ -624,7 +625,6 @@
             }
         }
 
-        // FUNÇÃO AUXILIAR PARA TRADUÇÃO DE ITENS ADICIONAIS
         function formatMaintenanceExtras(extras) {
             if (!extras || typeof extras !== 'object') return '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional.</li>';
             const mapping = {
@@ -646,22 +646,32 @@
         function logout() { window.location.href = '/index.html'; }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
 		
-		async function sincronizarPeca(btn, partName, availability) {
+		// --- SINCRONIZAÇÃO DE PEÇAS COM PERSISTÊNCIA NA MEMÓRIA ---
+        async function sincronizarPeca(btn, partName, availability) {
             const parent = btn.parentElement;
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
             try {
-                fetch(API_SYNC, {
+                await fetch(API_SYNC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         os_id: selecionada.id,
-                        part_name: partName,
+                        part_name: partName.trim(), 
                         availability: availability
                     })
                 });
-            } catch (e) { console.error("Erro na sincronização."); }
+                
+                if (selecionada.checklist_geral) {
+                    const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
+                    if (item) item.availability = availability;
+                }
+                console.log(`✅ Sincronizado: ${partName} -> ${availability}`);
+            } catch (e) { 
+                console.error("Erro na sincronização."); 
+                alert("Falha ao salvar peça em tempo real.");
+            }
         }
     </script>
 </body>
