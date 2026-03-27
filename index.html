@@ -363,6 +363,20 @@
             document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
             document.getElementById('obs-triagem').value = selecionada.observations || "";
 
+            // LÓGICA DE BOTÃO DINÂMICO (FILA vs STANDBY)
+            const btnStandby = document.getElementById('btn-standby-action');
+            if (selecionada.status === 'Standby') {
+                btnStandby.innerText = "VOLTAR PARA FILA DE ANÁLISE";
+                btnStandby.onclick = () => liberarDeStandby(); // Nova função
+                btnStandby.classList.replace('bg-slate-100', 'bg-blue-50');
+                btnStandby.classList.replace('text-slate-500', 'text-blue-700');
+            } else {
+                btnStandby.innerText = "Deixar OS em Standby";
+                btnStandby.onclick = () => colocarEmStandby();
+                btnStandby.classList.replace('bg-blue-50', 'bg-slate-100');
+                btnStandby.classList.replace('text-blue-700', 'text-slate-500');
+            }
+
             renderizarPecas(selecionada.checklist_geral || []);
         }
 
@@ -565,6 +579,48 @@ async function salvarTriagem(statusFinalOverride = null) {
                 alert("Erro ao mover para Standby.");
                 btn.disabled = false;
                 btn.innerText = "Deixar OS em Standby";
+            }
+        }
+		
+		// FUNÇÃO PARA TIRAR DE STANDBY E VOLTAR PARA FILA
+        async function liberarDeStandby() {
+            if (!selecionada) return;
+            const btn = document.getElementById('btn-standby-action');
+            btn.disabled = true;
+            btn.innerText = "RETORNANDO PARA FILA...";
+
+            // Captura o estado atual das peças para não perder as marcações
+            const pecasEstado = [];
+            document.querySelectorAll('#lista-pecas > div').forEach(div => {
+                const idItem = div.getAttribute('data-id');
+                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
+                pecasEstado.push({ id: idItem, availability: isOrder ? 'ORDER' : 'STOCK' });
+            });
+
+            const payload = { 
+                os_id: selecionada.id, 
+                status: 'Aguardando Triagem', // Voltando para o status inicial da Triagem
+                observations: document.getElementById('obs-triagem').value, 
+                items_availability: pecasEstado 
+            };
+
+            try {
+                const res = await fetch(API_POST, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if (res.ok) {
+                    document.getElementById('modal-status-title').innerText = "OS Liberada!";
+                    document.getElementById('modal-status-msg').innerText = "A Ordem de Serviço voltou para a FILA DE ANÁLISE.";
+                    document.getElementById('modal-status-standby').classList.remove('hidden');
+                    document.getElementById('modal-status-standby').classList.add('flex');
+                }
+            } catch (err) {
+                alert("Erro ao retornar para fila.");
+                btn.disabled = false;
+                btn.innerText = "VOLTAR PARA FILA DE ANÁLISE";
             }
         }
 
