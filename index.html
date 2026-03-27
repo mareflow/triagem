@@ -518,10 +518,10 @@ async function salvarTriagem(statusFinalOverride = null) {
             const pecasEstado = [];
             let temFaltante = false;
 
-            // Seleciona todas as divs de peças e percorre UMA ÚNICA VEZ
+            // Percorre as peças uma única vez (Loop Corrigido)
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name'); // Captura do atributo seguro
+                const name = div.getAttribute('data-name'); // Pega o nome direto do atributo
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 
                 if (isOrder) temFaltante = true;
@@ -557,22 +557,18 @@ async function salvarTriagem(statusFinalOverride = null) {
             } catch (err) { alert("Erro ao salvar triagem."); }
         }
 
-        async function colocarEmStandby() {
+async function colocarEmStandby() {
             if (!selecionada) return;
             const btn = document.getElementById('btn-standby-action');
             btn.disabled = true;
-            btn.innerText = "SALVANDO ESTADO...";
+            btn.innerText = "SALVANDO...";
 
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
-                const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name');
-                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
-                
                 pecasEstado.push({ 
-                    id: idItem, 
-                    name: name,
-                    availability: isOrder ? 'ORDER' : 'STOCK' 
+                    id: div.getAttribute('data-id'), 
+                    name: div.getAttribute('data-name'), // Nome padronizado
+                    availability: div.querySelector('.btn-toggle-order').classList.contains('active') ? 'ORDER' : 'STOCK' 
                 });
             });
 
@@ -580,46 +576,30 @@ async function salvarTriagem(statusFinalOverride = null) {
                 os_id: selecionada.id, 
                 status: 'Standby', 
                 observations: document.getElementById('obs-triagem').value, 
-                items_availability: pecasEstado // ENVIAMOS O ESTADO DAS PEÇAS JUNTO
+                items_availability: pecasEstado 
             };
 
             try {
-                // Usamos o API_POST da triagem que já sabe lidar com peças
-                const res = await fetch(API_POST, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
-                });
-                
-                if (res.ok) {
-                    document.getElementById('modal-status-msg').innerText = "A OS foi movida para STANDBY e o estado das peças foi preservado.";
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { 
+                    document.getElementById('modal-status-msg').innerText = "OS em Standby. Peças preservadas.";
                     document.getElementById('modal-status-standby').classList.remove('hidden');
                     document.getElementById('modal-status-standby').classList.add('flex');
                 }
-            } catch (err) {
-                alert("Erro ao mover para Standby.");
-                btn.disabled = false;
-                btn.innerText = "Deixar OS em Standby";
-            }
+            } catch (err) { alert("Erro."); btn.disabled = false; }
         }
-		
-		// FUNÇÃO PARA TIRAR DE STANDBY E VOLTAR PARA FILA
-async function liberarDeStandby() {
+
+        async function liberarDeStandby() {
             if (!selecionada) return;
             const btn = document.getElementById('btn-standby-action');
             btn.disabled = true;
-            btn.innerText = "RETORNANDO PARA FILA...";
 
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
-                const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name'); // CORREÇÃO: Usa data-name
-                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
-                
                 pecasEstado.push({ 
-                    id: idItem, 
-                    name: name, 
-                    availability: isOrder ? 'ORDER' : 'STOCK' 
+                    id: div.getAttribute('data-id'), 
+                    name: div.getAttribute('data-name'), // Nome padronizado
+                    availability: div.querySelector('.btn-toggle-order').classList.contains('active') ? 'ORDER' : 'STOCK' 
                 });
             });
 
@@ -631,23 +611,9 @@ async function liberarDeStandby() {
             };
 
             try {
-                const res = await fetch(API_POST, { 
-                    method: 'POST', 
-                    headers: { 'Content-Type': 'application/json' }, 
-                    body: JSON.stringify(payload) 
-                });
-                
-                if (res.ok) {
-                    document.getElementById('modal-status-title').innerText = "OS Liberada!";
-                    document.getElementById('modal-status-msg').innerText = "A Ordem de Serviço voltou para a FILA DE ANÁLISE.";
-                    document.getElementById('modal-status-standby').classList.remove('hidden');
-                    document.getElementById('modal-status-standby').classList.add('flex');
-                }
-            } catch (err) {
-                alert("Erro ao retornar para fila.");
-                btn.disabled = false;
-                btn.innerText = "VOLTAR PARA FILA DE ANÁLISE";
-            }
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) { location.reload(); }
+            } catch (err) { alert("Erro."); btn.disabled = false; }
         }
 
         async function showDetailsModalWithHistory(order) {
