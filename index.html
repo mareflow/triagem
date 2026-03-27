@@ -400,23 +400,20 @@ function renderizarPecas(items) {
                 return;
             }
             items.forEach(peca => {
-                // TRADUÇÃO UNÍSSONA:
                 let nameClean = peca.item_name.toUpperCase();
                 if (nameClean === 'ACTUATOR') nameClean = 'ATUADOR';
 
-                // Lógica de Estado: Prioriza o que já foi salvo na Triagem (availability)
-                // Se não houver nada na Triagem, usa a sugestão de Vendas (decisao_vendas)
                 const isOrder = peca.availability ? (peca.availability === 'ORDER') : (peca.decisao_vendas === 'TROCAR');
 
-container.innerHTML += `
-    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
                             <span class="text-[9px] text-slate-400 font-bold uppercase italic">Laudo Técnico: ${peca.status || 'OK'}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="togglePeca(this)" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
-                            <button onclick="togglePeca(this)" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
+                            <button onclick="sincronizarPeca(this, '${nameClean}', 'STOCK')" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
+                            <button onclick="sincronizarPeca(this, '${nameClean}', 'ORDER')" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
                         </div>
                     </div>`;
             });
@@ -634,6 +631,30 @@ async function colocarEmStandby() {
         function confirmarSalvar() { salvarTriagem(); }
         function logout() { window.location.href = '/index.html'; }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
+		
+		async function sincronizarPeca(btn, partName, availability) {
+            // 1. Feedback Visual Imediato
+            const parent = btn.parentElement;
+            parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+
+            // 2. Envio silencioso para o n8n
+            try {
+                fetch('https://webhook.mareflow.com.br/webhook/logistics/sync-part', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        os_id: selecionada.id,
+                        part_name: partName,
+                        availability: availability
+                    })
+                });
+                console.log(`Sincronizado: ${partName} -> ${availability}`);
+            } catch (e) {
+                console.error("Erro na sincronização automática.");
+            }
+        }
+		
     </script>
 </body>
 </html>
