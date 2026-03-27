@@ -198,9 +198,9 @@
 <button type="button" id="btn-standby-action" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">
     Deixar OS em Standby
 </button>
-                            <button type="button" onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">
-                                Liberar para Produção
-                            </button>
+<button type="button" id="btn-liberar-producao" onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">
+    Liberar para Produção
+</button>
                         </div>
                     </div>
                 </div>
@@ -334,7 +334,8 @@
             });
         }
 
-        function selecionarOS(id) {
+function selecionarOS(id) {
+            // Se clicar no mesmo card, deseleciona
             if (selecionada && selecionada.business_id === id) {
                 selecionada = null;
                 document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active', 'border-l-4', 'border-blue-600', 'bg-blue-50'));
@@ -342,9 +343,11 @@
                 document.getElementById('empty-state').classList.remove('hidden');
                 return;
             }
+
             selecionada = allOrders.find(o => o.business_id === id);
             if (!selecionada) return;
 
+            // Interface do card ativo
             document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active', 'border-l-4', 'border-blue-600', 'bg-blue-50'));
             const card = document.getElementById(`card-${id}`);
             if(card) card.classList.add('active', 'border-l-4', 'border-blue-600', 'bg-blue-50');
@@ -352,29 +355,38 @@
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('triage-panel').classList.remove('hidden');
 
+            // Preenche dados básicos
             document.getElementById('info-cliente').innerText = selecionada.client || '---';
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
-
             const campoPrevisao = document.getElementById('info-previsao');
             if (campoPrevisao && selecionada.previsao_saida) campoPrevisao.innerText = selecionada.previsao_saida.split('T')[0];
-
             document.getElementById('segunda-hora-check-visual').checked = selecionada.segunda_hora === true;
             document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
             document.getElementById('obs-triagem').value = selecionada.observations || "";
 
-            // LÓGICA DE BOTÃO DINÂMICO (FILA vs STANDBY)
+            // --- LÓGICA DE BOTÕES UNÍSSONO (FILA vs STANDBY) ---
             const btnStandby = document.getElementById('btn-standby-action');
+            const btnLiberar = document.getElementById('btn-liberar-producao');
+
             if (selecionada.status === 'Standby') {
+                // Se está em Standby: A única opção é voltar para a fila
                 btnStandby.innerText = "VOLTAR PARA FILA DE ANÁLISE";
-                btnStandby.onclick = () => liberarDeStandby(); // Nova função
+                btnStandby.onclick = () => liberarDeStandby(); 
                 btnStandby.classList.replace('bg-slate-100', 'bg-blue-50');
                 btnStandby.classList.replace('text-slate-500', 'text-blue-700');
+                
+                // ESCONDE o botão de liberar para produção
+                btnLiberar.classList.add('hidden');
             } else {
-                btnStandby.innerText = "Deixar OS em Standby";
+                // Se está na Fila normal: Pode ir para produção OU para standby
+                btnStandby.innerText = "DEIXAR OS EM STANDBY";
                 btnStandby.onclick = () => colocarEmStandby();
                 btnStandby.classList.replace('bg-blue-50', 'bg-slate-100');
                 btnStandby.classList.replace('text-blue-700', 'text-slate-500');
+                
+                // MOSTRA o botão de liberar para produção
+                btnLiberar.classList.remove('hidden');
             }
 
             renderizarPecas(selecionada.checklist_geral || []);
