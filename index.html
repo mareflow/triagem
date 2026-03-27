@@ -393,31 +393,33 @@ function selecionarOS(id) {
         }
 
 function renderizarPecas(items) {
-            const container = document.getElementById('lista-pecas');
-            container.innerHTML = '';
-            if (!items || items.length === 0) {
-                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic uppercase font-bold">Tudo OK com as peças.</p>';
-                return;
-            }
-            items.forEach(peca => {
-                let nameClean = peca.item_name.toUpperCase();
-                if (nameClean === 'ACTUATOR') nameClean = 'ATUADOR';
+    const container = document.getElementById('lista-pecas');
+    container.innerHTML = '';
+    
+    if (!items || items.length === 0) {
+        container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic uppercase font-bold">Nenhuma peça para troca nesta OS.</p>';
+        return;
+    }
 
-                const isOrder = peca.availability ? (peca.availability === 'ORDER') : (peca.decisao_vendas === 'TROCAR');
+    items.forEach(peca => {
+        const nameClean = peca.item_name.toUpperCase();
+        // Se o status for ORDER, o botão "Para Pedir" fica vermelho (active). 
+        // Se for STOCK, o botão "Em Estoque" fica verde (active).
+        const isOrder = peca.availability === 'ORDER';
 
-                container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
-                        <div class="flex flex-col">
-                            <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
-                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Laudo Técnico: ${peca.status || 'OK'}</span>
-                        </div>
-                        <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="sincronizarPeca(this, '${nameClean}', 'STOCK')" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
-                            <button onclick="sincronizarPeca(this, '${nameClean}', 'ORDER')" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
-                        </div>
-                    </div>`;
-            });
-        }
+        container.innerHTML += `
+            <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
+                <div class="flex flex-col">
+                    <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
+                    <span class="text-[9px] text-slate-400 font-bold uppercase italic">Veredito: ${peca.decisao_vendas || peca.status}</span>
+                </div>
+                <div class="flex bg-slate-100 rounded-lg p-1">
+                    <button onclick="sincronizarPeca(this, '${nameClean}', 'STOCK')" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
+                    <button onclick="sincronizarPeca(this, '${nameClean}', 'ORDER')" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
+                </div>
+            </div>`;
+    });
+}
 
         function togglePeca(el) {
             const parent = el.parentElement;
@@ -454,66 +456,73 @@ function renderizarPecas(items) {
         }
 
 function renderizarPendencias() {
-            const container = document.getElementById('lista-pecas-pendentes');
-            container.innerHTML = '';
-            let pecasFaltantes = [];
-            
-            allOrders.forEach(os => {
-                // REGRA TURBOSUL: Só mostra pendência se a OS NÃO estiver em Standby
-                if (os.checklist_geral && os.status !== 'Standby') { 
-                    os.checklist_geral.forEach(p => {
-                        if (p.availability === 'ORDER' && p.is_resolved !== true) {
-                            pecasFaltantes.push({ peca: p.item_name, os: os.business_id, id_item: p.id });
-                        }
-                    });
+    const container = document.getElementById('lista-pecas-pendentes');
+    container.innerHTML = '';
+    let pecasFaltantes = [];
+    
+    allOrders.forEach(os => {
+        // REGRA: Só é pendência de logística se a OS NÃO estiver mais na Triagem ou Standby
+        const emProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
+        
+        if (emProducao && os.checklist_geral) { 
+            os.checklist_geral.forEach(p => {
+                if (p.availability === 'ORDER' && p.is_resolved !== true) {
+                    pecasFaltantes.push({ peca: p.item_name, os: os.business_id, id_item: p.id });
                 }
             });
+        }
+    });
 
-            if (pecasFaltantes.length === 0) {
-                container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase">Nenhuma pendência encontrada.</div>`;
-                return;
-            }
+    if (pecasFaltantes.length === 0) {
+        container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase italic">Nenhuma pendência de compra ativa.</div>`;
+        return;
+    }
 
-            // Janela de visualização com altura fixa para permitir rolagem de muitos itens
-            let html = `<div class="overflow-y-auto max-h-[calc(100vh-250px)] rounded-2xl border border-slate-100 shadow-sm custom-scrollbar">
-                        <table class="w-full text-left border-collapse">
-                        <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
-                        <tr class="border-b border-slate-100"><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th><th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th><th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th></tr></thead><tbody class="divide-y divide-slate-50">`;
-            pecasFaltantes.forEach(item => {
-                html += `<tr><td class="px-6 py-4 font-black text-slate-800 text-sm">${item.peca}</td><td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os}</td><td class="px-6 py-4 text-center"><button onclick="marcarRecebido('${item.id_item}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase">Recebido</button></td></tr>`;
+    let html = `<div class="overflow-y-auto max-h-[calc(100vh-250px)] rounded-2xl border border-slate-100 shadow-sm custom-scrollbar">
+                <table class="w-full text-left border-collapse">
+                <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                <tr class="border-b border-slate-100">
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th>
+                    <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th>
+                    <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                </tr></thead><tbody class="divide-y divide-slate-50">`;
+    
+    pecasFaltantes.forEach(item => {
+        html += `<tr>
+            <td class="px-6 py-4 font-black text-slate-800 text-sm">${item.peca}</td>
+            <td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os}</td>
+            <td class="px-6 py-4 text-center">
+                <button onclick="marcarRecebido('${item.id_item}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-blue-700 transition">Marcar como Recebido</button>
+            </td>
+        </tr>`;
+    });
+    html += `</tbody></table></div>`;
+    container.innerHTML = html;
+}
+
+function atualizarContadores() {
+    // 1. OSs esperando triagem (Coluna Esquerda)
+    const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
+    
+    // 2. Pendências REAIS (Peças de OSs que já estão na Oficina mas não chegaram)
+    let pendingCount = 0;
+    allOrders.forEach(os => {
+        // Regra: Só conta se a OS já passou da Triagem/Standby e está "Aguardando Peças" ou similar
+        const estaNaProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
+        if (estaNaProducao && os.checklist_geral) {
+            os.checklist_geral.forEach(p => {
+                if (p.availability === 'ORDER' && p.is_resolved !== true) {
+                    pendingCount++;
+                }
             });
-            html += `</tbody></table></div>`;
-            container.innerHTML = html;
         }
+    });
 
-        function atualizarContadores() {
-            const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem' || o.status === 'Standby').length;
-            let pendingCount = 0;
-            allOrders.forEach(os => {
-                if (os.checklist_geral) os.checklist_geral.forEach(p => {
-                    if (p.availability === 'ORDER' && p.is_resolved !== true) pendingCount++;
-                });
-            });
-
-            document.getElementById('count-triage').innerText = `(${triageCount})`;
-            document.getElementById('count-pending').innerText = `(${pendingCount})`;
-            document.getElementById('count-side-triage').innerText = `(${allOrders.filter(o => o.status === 'Aguardando Triagem').length})`;
-            document.getElementById('count-side-standby').innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
-        }
-
-        function setActiveSidebarTab(tab) {
-            window.activeSidebarTab = tab;
-            const btnT = document.getElementById('side-tab-triage');
-            const btnS = document.getElementById('side-tab-standby');
-            if (tab === 'triage') {
-                btnT.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all';
-                btnS.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
-            } else {
-                btnS.className = 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all';
-                btnT.className = 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 transition-all';
-            }
-            renderizarFila();
-        }
+    document.getElementById('count-triage').innerText = `(${triageCount})`;
+    document.getElementById('count-pending').innerText = `(${pendingCount})`;
+    document.getElementById('count-side-triage').innerText = `(${triageCount})`;
+    document.getElementById('count-side-standby').innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
+}
 
 // FUNÇÃO AUXILIAR PARA COLETAR O ESTADO ATUAL DAS PEÇAS NA TELA
         function coletarEstadoDasPecas() {
