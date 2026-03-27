@@ -117,8 +117,8 @@
                     <div class="flex justify-between items-start mb-6">
                         <h3 class="text-slate-800 font-extrabold text-xl uppercase tracking-tighter">Detalhes da Logística</h3>
                         <button type="button" onclick="carregarLinhaDoTempo()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">
-    <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico Completo
-</button>
+                            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico Completo
+                        </button>
                     </div>
 
                     <!-- MODAL DE HISTÓRICO COMPLETO -->
@@ -240,7 +240,7 @@
 
     <!-- MODAL STATUS -->
     <div id="modal-status-standby" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
-        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-blue-600">
+        <div class="bg-white rounded-3xl p-8 max-sm w-full shadow-2xl text-center border-t-8 border-blue-600">
             <div class="w-20 h-20 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
             </div>
@@ -258,6 +258,7 @@
 
         const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
         const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
+        const API_SYNC = 'https://webhook.mareflow.com.br/webhook-test/logistics/sync-part';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
         let allOrders = []; 
@@ -349,7 +350,6 @@
             if (campoPrevisao) campoPrevisao.innerText = selecionada.previsao_saida ? selecionada.previsao_saida.split('T')[0] : '---';
             
             document.getElementById('segunda-hora-check-visual').checked = selecionada.segunda_hora === true;
-            document.getElementById('btn-historico-completo').onclick = () => showDetailsModalWithHistory(selecionada);
             document.getElementById('obs-triagem').value = selecionada.observations || "";
 
             const btnStandby = document.getElementById('btn-standby-action');
@@ -488,7 +488,6 @@
             document.getElementById('count-side-standby').innerText = `(${allOrders.filter(o => o.status === 'Standby').length})`;
         }
 
-        // --- FUNÇÃO MESTRE: COLETA DADOS SEM ERROS ---
         function coletarDadosDasPecas() {
             const pecasEstado = [];
             let temFaltante = false;
@@ -502,15 +501,18 @@
             return { pecasEstado, temFaltante };
         }
 
+        // --- FUNÇÕES DE AÇÃO BLINDADAS ---
         async function salvarTriagem(statusFinalOverride = null) {
             if(!selecionada) return;
             const { pecasEstado, temFaltante } = coletarDadosDasPecas();
+
             if (temFaltante && !statusFinalOverride) {
-                document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> tem faltantes.`;
+                document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> tem faltantes. Como deseja proceder?`;
                 document.getElementById('modal-confirm').classList.remove('hidden');
                 document.getElementById('modal-confirm').classList.add('flex');
                 return;
             }
+
             const payload = { 
                 os_id: selecionada.id, 
                 status: statusFinalOverride || 'Aguardando Desmontagem OS', 
@@ -518,31 +520,57 @@
                 items_availability: pecasEstado,
                 user_id: FALLBACK_USER 
             };
-            const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) location.reload();
+
+            try {
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) location.reload();
+            } catch (err) { alert("Erro ao salvar triagem."); }
         }
 
         async function colocarEmStandby() {
             if (!selecionada) return;
             const { pecasEstado } = coletarDadosDasPecas();
-            const payload = { os_id: selecionada.id, status: 'Standby', observations: document.getElementById('obs-triagem').value, items_availability: pecasEstado };
-            const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) {
-                document.getElementById('modal-status-msg').innerText = "OS movida para Standby. Peças salvas.";
-                document.getElementById('modal-status-standby').classList.remove('hidden');
-                document.getElementById('modal-status-standby').classList.add('flex');
+            const btn = document.getElementById('btn-standby-action');
+            btn.disabled = true; 
+            btn.innerText = "SALVANDO...";
+
+            const payload = { 
+                os_id: selecionada.id, 
+                status: 'Standby', 
+                observations: document.getElementById('obs-triagem').value, 
+                items_availability: pecasEstado 
+            };
+
+            try {
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) {
+                    document.getElementById('modal-status-msg').innerText = "OS movida para Standby. Peças preservadas.";
+                    document.getElementById('modal-status-standby').classList.remove('hidden');
+                    document.getElementById('modal-status-standby').classList.add('flex');
+                }
+            } catch (err) { 
+                alert("Erro ao mover."); 
+                btn.disabled = false; 
+                btn.innerText = "Deixar OS em Standby"; 
             }
         }
 
         async function liberarDeStandby() {
             if (!selecionada) return;
             const { pecasEstado } = coletarDadosDasPecas();
-            const payload = { os_id: selecionada.id, status: 'Aguardando Triagem', observations: document.getElementById('obs-triagem').value, items_availability: pecasEstado };
-            const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (res.ok) location.reload();
+            const payload = { 
+                os_id: selecionada.id, 
+                status: 'Aguardando Triagem', 
+                observations: document.getElementById('obs-triagem').value, 
+                items_availability: pecasEstado 
+            };
+            try {
+                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                if (res.ok) location.reload();
+            } catch (err) { alert("Erro ao retornar."); }
         }
 
-// --- FUNÇÃO DE HISTÓRICO UNÍSSONA (TRIAGEM) ---
+        // --- FUNÇÃO DE HISTÓRICO ---
         async function carregarLinhaDoTempo() {
             if (!selecionada) {
                 alert("Selecione uma OS primeiro.");
@@ -550,29 +578,23 @@
             }
 
             const os = selecionada;
-            
-            // Preenchimento do cabeçalho do modal
             document.getElementById('detail-business-id').textContent = os.business_id;
             document.getElementById('detail-model').textContent = os.model;
             document.getElementById('detail-client').textContent = os.client;
             document.getElementById('detail-status').textContent = os.status;
-            
-            // Correção de Colunas: Lê o que realmente vem do Supabase
             document.getElementById('detail-difficulty').textContent = os.difficulty || '1';
             document.getElementById('detail-trade-in').textContent = os.is_trade_in ? `Troca (${os.trade_in_option})` : 'Venda Comum';
             document.getElementById('detail-observation').textContent = os.observation || 'Sem observações técnicas.';
             
-            // Tratamento de Itens Adicionais (Atuador, etc)
             const listExtras = document.getElementById('detail-maintenance-extras');
             try {
                 let extras = os.maintenance_extras;
                 if (typeof extras === 'string') extras = JSON.parse(extras);
                 listExtras.innerHTML = formatMaintenanceExtras(extras);
             } catch (e) {
-                listExtras.innerHTML = '<li class="text-gray-400">Nenhum item adicional.</li>';
+                listExtras.innerHTML = '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional.</li>';
             }
 
-            // Busca da Timeline no banco
             const timeline = document.getElementById('timeline-container');
             timeline.innerHTML = '<p class="text-xs text-blue-500 animate-pulse text-center py-4 uppercase font-bold">Buscando rastreio...</p>';
             
@@ -598,9 +620,24 @@
                     timeline.innerHTML = '<p class="text-[10px] text-slate-400 italic text-center uppercase">Iniciando histórico...</p>';
                 }
             } catch (err) {
-                console.error(err);
                 timeline.innerHTML = '<p class="text-xs text-red-500 text-center font-bold">ERRO AO CARREGAR.</p>';
             }
+        }
+
+        // FUNÇÃO AUXILIAR PARA TRADUÇÃO DE ITENS ADICIONAIS
+        function formatMaintenanceExtras(extras) {
+            if (!extras || typeof extras !== 'object') return '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional.</li>';
+            const mapping = {
+                actuator: 'Atuador',
+                geometry: 'Geometria Variável',
+                geometryStem: 'Canote da Geometria',
+                geometryFlange: 'Flange da Geometria'
+            };
+            const items = Object.entries(extras)
+                .filter(([_, val]) => val === true || (val && val.came === true))
+                .map(([key, _]) => `<li class="font-black text-slate-700 uppercase text-[11px]">${mapping[key] || key}</li>`);
+
+            return items.length > 0 ? items.join('') : '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional identificado.</li>';
         }
 
         function marcarRecebido(id) { alert("Funcionalidade em desenvolvimento para o ID: " + id); }
@@ -615,7 +652,7 @@
             btn.classList.add('active');
 
             try {
-                fetch('https://webhook.mareflow.com.br/webhook/logistics/sync-part', {
+                fetch(API_SYNC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
