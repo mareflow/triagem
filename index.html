@@ -566,10 +566,12 @@ async function salvarTriagem(statusFinalOverride = null) {
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
+                const name = div.getAttribute('data-name');
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 
                 pecasEstado.push({ 
                     id: idItem, 
+                    name: name,
                     availability: isOrder ? 'ORDER' : 'STOCK' 
                 });
             });
