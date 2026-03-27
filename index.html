@@ -518,25 +518,19 @@ async function salvarTriagem(statusFinalOverride = null) {
             const pecasEstado = [];
             let temFaltante = false;
 
-document.querySelectorAll('#lista-pecas > div').forEach(div => {
+            // Seleciona todas as divs de peças e percorre UMA ÚNICA VEZ
+            document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name'); 
+                const name = div.getAttribute('data-name'); // Captura do atributo seguro
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
-                if (isOrder) temFaltante = true;
                 
-                document.querySelectorAll('#lista-pecas > div').forEach(div => {
-                const idItem = div.getAttribute('data-id');
-                // Captura o nome da peça dentro do span
-                const name = div.querySelector('span').innerText; 
-                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 if (isOrder) temFaltante = true;
                 
                 pecasEstado.push({ 
                     id: idItem, 
-                    name: name, // Agora o nome vai preenchido
+                    name: name, 
                     availability: isOrder ? 'ORDER' : 'STOCK' 
                 });
-            });
             });
 
             if (temFaltante && !statusFinalOverride) {
@@ -552,10 +546,15 @@ document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 observations: document.getElementById('obs-triagem').value, 
                 items_availability: pecasEstado 
             };
+
             try {
-                const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+                const res = await fetch(API_POST, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
                 if (res.ok) { location.reload(); }
-            } catch (err) { alert("Erro ao salvar."); }
+            } catch (err) { alert("Erro ao salvar triagem."); }
         }
 
         async function colocarEmStandby() {
@@ -603,28 +602,28 @@ document.querySelectorAll('#lista-pecas > div').forEach(div => {
         }
 		
 		// FUNÇÃO PARA TIRAR DE STANDBY E VOLTAR PARA FILA
-        async function liberarDeStandby() {
+async function liberarDeStandby() {
             if (!selecionada) return;
             const btn = document.getElementById('btn-standby-action');
             btn.disabled = true;
             btn.innerText = "RETORNANDO PARA FILA...";
 
-            // Captura o estado atual das peças para não perder as marcações
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
                 const idItem = div.getAttribute('data-id');
-                const name = div.querySelector('span').innerText; // Captura o nome
+                const name = div.getAttribute('data-name'); // CORREÇÃO: Usa data-name
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
+                
                 pecasEstado.push({ 
                     id: idItem, 
-                    name: name, // O n8n precisa disso para o campo part_name
+                    name: name, 
                     availability: isOrder ? 'ORDER' : 'STOCK' 
                 });
             });
 
             const payload = { 
                 os_id: selecionada.id, 
-                status: 'Aguardando Triagem', // Voltando para o status inicial da Triagem
+                status: 'Aguardando Triagem', 
                 observations: document.getElementById('obs-triagem').value, 
                 items_availability: pecasEstado 
             };
