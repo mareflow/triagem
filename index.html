@@ -370,16 +370,23 @@ function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
             container.innerHTML = '';
             if (!items || items.length === 0) {
-                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic">Tudo OK com as peças.</p>';
+                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic uppercase font-bold">Tudo OK com as peças.</p>';
                 return;
             }
             items.forEach(peca => {
-                const isOrder = peca.decisao_vendas === 'TROCAR' || peca.availability === 'ORDER';
+                // TRADUÇÃO UNÍSSONA:
+                let nameClean = peca.item_name.toUpperCase();
+                if (nameClean === 'ACTUATOR') nameClean = 'ATUADOR';
+
+                // Lógica de Estado: Prioriza o que já foi salvo na Triagem (availability)
+                // Se não houver nada na Triagem, usa a sugestão de Vendas (decisao_vendas)
+                const isOrder = peca.availability ? (peca.availability === 'ORDER') : (peca.decisao_vendas === 'TROCAR');
+
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}">
                         <div class="flex flex-col">
-                            <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${peca.item_name}</span>
-                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Ref: ${peca.status || 'OK'}</span>
+                            <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
+                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Laudo Técnico: ${peca.status || 'OK'}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1">
                             <button onclick="togglePeca(this)" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
@@ -519,14 +526,46 @@ async function salvarTriagem(statusFinalOverride = null) {
 
         async function colocarEmStandby() {
             if (!selecionada) return;
+            const btn = document.getElementById('btn-standby-action');
+            btn.disabled = true;
+            btn.innerText = "SALVANDO ESTADO...";
+
             const pecasEstado = [];
             document.querySelectorAll('#lista-pecas > div').forEach(div => {
-                const name = div.querySelector('span').innerText;
-                pecasEstado.push({ item_name: name, decisao_vendas: div.querySelector('.btn-toggle-order').classList.contains('active') ? 'TROCAR' : 'OK' });
+                const idItem = div.getAttribute('data-id');
+                const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
+                
+                pecasEstado.push({ 
+                    id: idItem, 
+                    availability: isOrder ? 'ORDER' : 'STOCK' 
+                });
             });
-            const payload = { os_id: selecionada.id, status: 'Standby', decisions: pecasEstado, observations: document.getElementById('obs-triagem').value };
-            await fetch('https://webhook.mareflow.com.br/webhook/orders/lock-os', { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
-            location.reload();
+
+            const payload = { 
+                os_id: selecionada.id, 
+                status: 'Standby', 
+                observations: document.getElementById('obs-triagem').value, 
+                items_availability: pecasEstado // ENVIAMOS O ESTADO DAS PEÇAS JUNTO
+            };
+
+            try {
+                // Usamos o API_POST da triagem que já sabe lidar com peças
+                const res = await fetch(API_POST, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                
+                if (res.ok) {
+                    document.getElementById('modal-status-msg').innerText = "A OS foi movida para STANDBY e o estado das peças foi preservado.";
+                    document.getElementById('modal-status-standby').classList.remove('hidden');
+                    document.getElementById('modal-status-standby').classList.add('flex');
+                }
+            } catch (err) {
+                alert("Erro ao mover para Standby.");
+                btn.disabled = false;
+                btn.innerText = "Deixar OS em Standby";
+            }
         }
 
         async function showDetailsModalWithHistory(order) {
