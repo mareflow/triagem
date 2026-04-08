@@ -396,18 +396,23 @@ function renderizarPecas(items) {
 
             filtradas.forEach(p => {
                 const nome = p.item_name.toUpperCase();
-                // Importante: Lemos o availability que vem do banco
-                const isStock = p.availability === 'STOCK';
+                
+                // --- CORREÇÃO DE OURO: COMPARAÇÃO ROBUSTA ---
+                // Pegamos o valor, transformamos em MAIÚSCULO e limpamos espaços
+                const valorBanco = (p.availability || "ORDER").toUpperCase().trim();
+                const isStock = (valorBanco === 'STOCK');
 
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0" data-id="${p.id}" data-name="${nome}">
+                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nome}">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase">${nome}</span>
                             <span class="text-[9px] text-red-600 font-bold uppercase italic">Veredito: ${p.decisao_vendas || p.status}</span>
                         </div>
-                        <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')" class="btn-toggle-stock ${isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md">ESTOQUE</button>
-                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')" class="btn-toggle-order ${!isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md ml-1">PEDIR</button>
+                        <div class="flex bg-slate-100 rounded-lg p-1 shadow-inner">
+                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')" 
+                                    class="btn-toggle-stock ${isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md transition-all">ESTOQUE</button>
+                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')" 
+                                    class="btn-toggle-order ${!isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md ml-1 transition-all">PEDIR</button>
                         </div>
                     </div>`;
             });
