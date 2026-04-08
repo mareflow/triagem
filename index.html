@@ -661,9 +661,8 @@ function renderizarPecas(items) {
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
 		
 		// --- SINCRONIZAÇÃO DE PEÇAS COM PERSISTÊNCIA NA MEMÓRIA ---
-        async function sincronizarPeca(btn, partName, availability) {
+async function sincronizarPeca(btn, partName, availability) {
             const parent = btn.parentElement;
-            // Salva o estado anterior para caso dê erro
             const prevActive = parent.querySelector('button.active');
             
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
@@ -675,24 +674,22 @@ function renderizarPecas(items) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         os_id: selecionada.id,
-                        part_name: partName.trim(), 
+                        // GARANTE QUE O NOME VAI EM MAIÚSCULAS PARA O N8N ENCONTRAR NO BANCO
+                        part_name: partName.toUpperCase().trim(), 
                         availability: availability
                     })
                 });
                 
-                if (!response.ok) {
-                    throw new Error("Erro no servidor");
-                }
-
+                if (!response.ok) throw new Error("Erro no servidor");
+                
+                // Atualiza na memória local da página
                 if (selecionada.checklist_geral) {
                     const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
                     if (item) item.availability = availability;
                 }
-                console.log(`✅ Salvo no Banco: ${partName} -> ${availability}`);
+                console.log(`✅ Sincronizado com Sucesso: ${partName}`);
             } catch (e) { 
-                console.error("Erro na sincronização:", e); 
-                alert("❌ ERRO: Não foi possível salvar no banco de dados. Verifique o n8n.");
-                // Volta o botão para o estado anterior se falhou
+                alert("❌ Erro ao salvar disponibilidade.");
                 btn.classList.remove('active');
                 if(prevActive) prevActive.classList.add('active');
             }
