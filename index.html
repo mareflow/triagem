@@ -295,17 +295,21 @@
             const container = document.getElementById('fila-container');
             if (!container) return;
             container.innerHTML = '';
+            
             let ordensParaMostrar = [];
 
+            // Se estiver na aba de pendências, a sidebar avisa que a lista central é soberana
             if (activeTab === 'pending') {
-                ordensParaMostrar = allOrders.filter(os => os.checklist_geral && os.checklist_geral.some(p => p.availability === 'ORDER' && p.is_resolved !== true));
-            } else {
-                const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
-                ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
+                container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-tight">Lista de Pendências<br>de Compra Ativa</p></div>`;
+                return;
             }
+
+            // Filtra rigorosamente por quem está na Triagem ou Standby
+            const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
+            ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
             
             if (ordensParaMostrar.length === 0) {
-                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Nenhuma ordem encontrada.</p></div>`;
+                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">Nenhuma ordem em<br>${statusFiltro}.</p></div>`;
                  return;
             }
 
@@ -315,7 +319,7 @@
                     <div onclick="selecionarOS('${os.business_id}')" id="card-${os.business_id}" class="os-card ${isActive} p-4 rounded-xl shadow-sm border cursor-pointer hover:shadow-md transition-all group mb-3">
                         <div class="flex justify-between items-start mb-2">
                             <span class="text-slate-800 font-extrabold text-sm uppercase">${os.business_id}</span>
-                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${getUrgencyColor(os.urgency)}">${os.urgency || 'Normal'}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${os.urgency === 'Alta' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">${os.urgency || 'Normal'}</span>
                         </div>
                         <h3 class="text-slate-700 font-bold text-xs group-hover:text-blue-600 transition">${os.model}</h3>
                         <p class="text-slate-400 text-[11px] font-medium">${os.client}</p>
@@ -447,25 +451,30 @@ function renderizarPecas(items) {
         }
 
         // 1. RENDERIZA A LISTA DE COMPRAS (SÓ O QUE ESTÁ EM PRODUÇÃO E É 'ORDER')
+// --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
         function renderizarPendencias() {
             const container = document.getElementById('lista-pecas-pendentes');
             if (!container) return;
             container.innerHTML = '';
+            
             let pecasFaltantes = [];
             
+            // Regra: Busca peças 'ORDER' de OSs que já saíram da Triagem
             allOrders.forEach(os => {
-                // Filtro: só mostra peças de turbinas que já saíram da triagem
-                const emProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
+                const jaSaiuDaTriagem = !['Aguardando Triagem', 'Standby'].includes(os.status);
                 
-                if (emProducao && os.checklist_geral) { 
+                if (jaSaiuDaTriagem && os.checklist_geral) { 
                     os.checklist_geral.forEach(p => {
-                        const statusPeca = (p.availability || "").toUpperCase();
+                        const statusPeca = (p.availability || "").toUpperCase().trim();
+                        // Se a peça é para PEDIR e ainda não foi recebida
                         if (statusPeca === 'ORDER' && p.is_resolved !== true) {
                             pecasFaltantes.push({ 
                                 peca: p.item_name, 
                                 os_display: os.business_id, 
                                 os_id: os.id,
-                                id_item: p.id 
+                                id_item: p.id,
+                                modelo: os.model,
+                                cliente: os.client
                             });
                         }
                     });
@@ -473,38 +482,53 @@ function renderizarPecas(items) {
             });
 
             if (pecasFaltantes.length === 0) {
-                container.innerHTML = `<div class="py-20 text-center text-slate-400 font-bold text-sm uppercase italic">Nenhuma pendência de compra ativa.</div>`;
+                container.innerHTML = `
+                    <div class="py-20 text-center flex flex-col items-center">
+                        <i class="fa-solid fa-box-open text-slate-200 text-6xl mb-4"></i>
+                        <p class="text-slate-400 font-black text-sm uppercase italic tracking-widest">Nenhuma pendência de compra ativa.</p>
+                    </div>`;
                 return;
             }
 
-            let html = `<div class="overflow-hidden rounded-2xl border border-slate-100 shadow-sm bg-white">
-                        <table class="w-full text-left border-collapse">
-                        <thead class="bg-slate-50">
-                        <tr class="border-b border-slate-100">
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Faltante</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S Relacionada</th>
-                            <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                        </tr></thead><tbody class="divide-y divide-slate-50">`;
+            // Renderiza a Tabela de Almoxarifado
+            let html = `
+                <div class="overflow-hidden rounded-3xl border border-slate-100 shadow-xl bg-white">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Item p/ Pedir</th>
+                                <th class="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">O.S Vinculada</th>
+                                <th class="px-8 py-5 text-center text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">`;
             
             pecasFaltantes.forEach(item => {
-                html += `<tr>
-                    <td class="px-6 py-4 font-black text-slate-800 text-sm uppercase">${item.peca}</td>
-                    <td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os_display}</td>
-                    <td class="px-6 py-4 text-center">
-                        <button onclick="marcarRecebido('${item.os_id}', '${item.peca}')" 
-                                class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-700 transition shadow-lg">
-                            Dar Baixa (Chegou)
-                        </button>
-                    </td>
-                </tr>`;
+                html += `
+                    <tr class="hover:bg-slate-50 transition">
+                        <td class="px-8 py-6">
+                            <p class="font-black text-slate-800 text-sm uppercase tracking-tighter">${item.peca}</p>
+                            <p class="text-[9px] text-red-500 font-bold uppercase italic mt-1">Urgente: Aguardando Compra</p>
+                        </td>
+                        <td class="px-8 py-6">
+                            <p class="text-blue-600 font-black text-xs">${item.os_display}</p>
+                            <p class="text-[10px] text-slate-400 font-medium uppercase">${item.cliente} | ${item.modelo}</p>
+                        </td>
+                        <td class="px-8 py-6 text-center">
+                            <button onclick="marcarRecebido('${item.os_id}', '${item.peca}')" 
+                                    class="bg-emerald-600 text-white px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-emerald-700 transition shadow-lg shadow-emerald-100">
+                                <i class="fa-solid fa-truck-ramp-box mr-2"></i> Dar Baixa
+                            </button>
+                        </td>
+                    </tr>`;
             });
             html += `</tbody></table></div>`;
             container.innerHTML = html;
         }
 
-        // 2. FUNÇÃO PARA DAR BAIXA (SINCRONIZA COM O N8N)
+        // --- 2. FUNÇÃO PARA DAR BAIXA NA PENDÊNCIA (MOVE PARA STOCK E IS_RESOLVED = TRUE) ---
         async function marcarRecebido(osId, partName) {
-            if(!confirm(`Confirmar que a peça ${partName} chegou?`)) return;
+            if(!confirm(`Confirmar que a peça ${partName} chegou no estoque?`)) return;
 
             try {
                 const response = await fetch(API_SYNC, {
@@ -518,10 +542,16 @@ function renderizarPecas(items) {
                 });
                 
                 if (response.ok) {
-                    await carregarDados(); // Recarrega para o item sumir da lista
-                    alert(`✅ Peça ${partName} recebida!`);
+                    // Recarrega os dados do banco para o item sumir da lista central e dos contadores
+                    await carregarDados();
+                    alert(`✅ Item ${partName} registrado no estoque.`);
+                } else {
+                    alert("Erro ao atualizar banco de dados.");
                 }
-            } catch (e) { alert("Erro de conexão."); }
+            } catch (e) { 
+                console.error(e);
+                alert("Falha de conexão com o servidor n8n.");
+            }
         }
 
         // 3. ATUALIZA CONTADORES DO TOPO
