@@ -663,11 +663,14 @@ function renderizarPecas(items) {
 		// --- SINCRONIZAÇÃO DE PEÇAS COM PERSISTÊNCIA NA MEMÓRIA ---
         async function sincronizarPeca(btn, partName, availability) {
             const parent = btn.parentElement;
+            // Salva o estado anterior para caso dê erro
+            const prevActive = parent.querySelector('button.active');
+            
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
 
             try {
-                await fetch(API_SYNC, {
+                const response = await fetch(API_SYNC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -677,14 +680,21 @@ function renderizarPecas(items) {
                     })
                 });
                 
+                if (!response.ok) {
+                    throw new Error("Erro no servidor");
+                }
+
                 if (selecionada.checklist_geral) {
                     const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
                     if (item) item.availability = availability;
                 }
-                console.log(`✅ Sincronizado: ${partName} -> ${availability}`);
+                console.log(`✅ Salvo no Banco: ${partName} -> ${availability}`);
             } catch (e) { 
-                console.error("Erro na sincronização."); 
-                alert("Falha ao salvar peça em tempo real.");
+                console.error("Erro na sincronização:", e); 
+                alert("❌ ERRO: Não foi possível salvar no banco de dados. Verifique o n8n.");
+                // Volta o botão para o estado anterior se falhou
+                btn.classList.remove('active');
+                if(prevActive) prevActive.classList.add('active');
             }
         }
     </script>
