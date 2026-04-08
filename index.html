@@ -446,17 +446,27 @@ function renderizarPecas(items) {
             renderizarFila();
         }
 
+        // 1. RENDERIZA A LISTA DE COMPRAS (SÓ O QUE ESTÁ EM PRODUÇÃO E É 'ORDER')
         function renderizarPendencias() {
             const container = document.getElementById('lista-pecas-pendentes');
+            if (!container) return;
             container.innerHTML = '';
             let pecasFaltantes = [];
             
             allOrders.forEach(os => {
+                // Filtro: só mostra peças de turbinas que já saíram da triagem
                 const emProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
+                
                 if (emProducao && os.checklist_geral) { 
                     os.checklist_geral.forEach(p => {
-                        if (p.availability === 'ORDER' && p.is_resolved !== true) {
-                            pecasFaltantes.push({ peca: p.item_name, os: os.business_id, id_item: p.id });
+                        const statusPeca = (p.availability || "").toUpperCase();
+                        if (statusPeca === 'ORDER' && p.is_resolved !== true) {
+                            pecasFaltantes.push({ 
+                                peca: p.item_name, 
+                                os_display: os.business_id, 
+                                os_id: os.id,
+                                id_item: p.id 
+                            });
                         }
                     });
                 }
@@ -467,21 +477,24 @@ function renderizarPecas(items) {
                 return;
             }
 
-            let html = `<div class="overflow-y-auto max-h-[calc(100vh-250px)] rounded-2xl border border-slate-100 shadow-sm custom-scrollbar">
+            let html = `<div class="overflow-hidden rounded-2xl border border-slate-100 shadow-sm bg-white">
                         <table class="w-full text-left border-collapse">
-                        <thead class="sticky top-0 bg-slate-50 z-10 shadow-sm">
+                        <thead class="bg-slate-50">
                         <tr class="border-b border-slate-100">
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça</th>
-                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">OS</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Faltante</th>
+                            <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S Relacionada</th>
                             <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
                         </tr></thead><tbody class="divide-y divide-slate-50">`;
             
             pecasFaltantes.forEach(item => {
                 html += `<tr>
-                    <td class="px-6 py-4 font-black text-slate-800 text-sm">${item.peca}</td>
-                    <td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os}</td>
+                    <td class="px-6 py-4 font-black text-slate-800 text-sm uppercase">${item.peca}</td>
+                    <td class="px-6 py-4 text-blue-600 font-bold text-xs">${item.os_display}</td>
                     <td class="px-6 py-4 text-center">
-                        <button onclick="marcarRecebido('${item.id_item}')" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-[9px] font-black uppercase hover:bg-blue-700 transition">Marcar como Recebido</button>
+                        <button onclick="marcarRecebido('${item.os_id}', '${item.peca}')" 
+                                class="bg-emerald-600 text-white px-5 py-2 rounded-xl text-[9px] font-black uppercase hover:bg-emerald-700 transition shadow-lg">
+                            Dar Baixa (Chegou)
+                        </button>
                     </td>
                 </tr>`;
             });
@@ -489,7 +502,29 @@ function renderizarPecas(items) {
             container.innerHTML = html;
         }
 
-        // --- ATUALIZAR CONTADORES COM FILTRO STANDBY ---
+        // 2. FUNÇÃO PARA DAR BAIXA (SINCRONIZA COM O N8N)
+        async function marcarRecebido(osId, partName) {
+            if(!confirm(`Confirmar que a peça ${partName} chegou?`)) return;
+
+            try {
+                const response = await fetch(API_SYNC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        os_id: osId,
+                        part_name: partName.toUpperCase().trim(), 
+                        availability: 'STOCK' 
+                    })
+                });
+                
+                if (response.ok) {
+                    await carregarDados(); // Recarrega para o item sumir da lista
+                    alert(`✅ Peça ${partName} recebida!`);
+                }
+            } catch (e) { alert("Erro de conexão."); }
+        }
+
+        // 3. ATUALIZA CONTADORES DO TOPO
         function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
             const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
@@ -499,7 +534,8 @@ function renderizarPecas(items) {
                 const estaNaProducao = !['Aguardando Triagem', 'Standby'].includes(os.status);
                 if (estaNaProducao && os.checklist_geral) {
                     os.checklist_geral.forEach(p => {
-                        if (p.availability === 'ORDER' && p.is_resolved !== true) pendingCount++;
+                        const statusPeca = (p.availability || "").toUpperCase();
+                        if (statusPeca === 'ORDER' && p.is_resolved !== true) pendingCount++;
                     });
                 }
             });
