@@ -374,26 +374,43 @@
 
         function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
+            if (!container) return;
             container.innerHTML = '';
             
-            if (!items || items.length === 0) {
-                container.innerHTML = '<p class="p-4 text-slate-400 text-xs text-center italic uppercase font-bold">Nenhuma peça para troca nesta OS.</p>';
+            // --- FILTRO RIGOROSO: Só mostra o que Técnico ou Vendas marcou como TROCAR ---
+            const pecasParaProcessar = (items || []).filter(peca => {
+                const status = (peca.status || "").toUpperCase();
+                const decisao = (peca.decisao_vendas || "").toUpperCase();
+                // Mostra se o veredito for "TROCAR", "TROCAR PEÇA" ou se vendas decidiu "TROCAR"
+                return status.includes('TROCAR') || decisao.includes('TROCAR');
+            });
+
+            if (pecasParaProcessar.length === 0) {
+                container.innerHTML = `
+                    <div class="p-12 text-center border-2 border-dashed border-slate-100 rounded-2xl m-4">
+                        <p class="text-[10px] font-black text-blue-600 uppercase italic tracking-widest leading-relaxed">
+                            NENHUMA PEÇA PARA TROCA<br>IDENTIFICADA NESTA OS.
+                        </p>
+                    </div>`;
                 return;
             }
 
-            items.forEach(peca => {
-                const nameClean = peca.item_name.toUpperCase();
+            pecasParaProcessar.forEach(peca => {
+                const nameClean = (peca.item_name || peca.name || "Item").toUpperCase();
                 const isOrder = peca.availability === 'ORDER';
 
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0" data-id="${peca.id}" data-name="${nameClean}">
+                    <div class="flex items-center justify-between p-4 bg-white border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition" data-id="${peca.id}" data-name="${nameClean}">
                         <div class="flex flex-col">
                             <span class="text-slate-800 font-black text-xs uppercase tracking-tighter">${nameClean}</span>
-                            <span class="text-[9px] text-slate-400 font-bold uppercase italic">Veredito: ${peca.decisao_vendas || peca.status}</span>
+                            <div class="flex items-center space-x-2 mt-0.5">
+                                <span class="text-[9px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded font-black uppercase">Trocar</span>
+                                <span class="text-[9px] text-slate-400 font-bold uppercase italic">Ref: ${peca.decisao_vendas || peca.status}</span>
+                            </div>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1">
-                            <button onclick="sincronizarPeca(this, '${nameClean}', 'STOCK')" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">Em Estoque</button>
-                            <button onclick="sincronizarPeca(this, '${nameClean}', 'ORDER')" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">Para Pedir</button>
+                            <button onclick="sincronizarPeca(this, '${nameClean}', 'STOCK')" class="btn-toggle-stock ${!isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all">ESTOQUE</button>
+                            <button onclick="sincronizarPeca(this, '${nameClean}', 'ORDER')" class="btn-toggle-order ${isOrder ? 'active' : ''} text-[9px] font-black uppercase tracking-wider px-4 py-2 rounded-md transition-all ml-1">PEDIR</button>
                         </div>
                     </div>`;
             });
