@@ -250,6 +250,21 @@
         </div>
     </div>
 
+    <!-- MODAL CONFIRMAÇÃO DE BAIXA (BONITO) -->
+    <div id="modal-baixa-peca" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-green-500">
+            <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+            <h4 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Receber Peça</h4>
+            <p id="modal-baixa-msg" class="text-slate-500 text-sm mb-6 font-medium">Confirmar recebimento?</p>
+            <div class="flex gap-3">
+                <button onclick="fecharModalBaixa()" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-200 transition uppercase text-xs tracking-widest">Cancelar</button>
+                <button id="btn-executar-baixa" onclick="confirmarBaixaExecutar()" class="flex-1 bg-green-500 text-white font-bold py-3 rounded-xl hover:bg-green-600 transition shadow-lg shadow-green-100 uppercase text-xs tracking-widest">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script>
         const SUPABASE_URL = 'https://zghaqlaqozsskfldgsfe.supabase.co';
@@ -531,34 +546,57 @@ function renderizarPendencias() {
     container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
 }
 
-async function marcarRecebido(osId, partName) {
-    if (!confirm(`Confirmar recebimento da peça "${partName.toUpperCase()}" para a OS associada?`)) {
-        return;
-    }
+let osParaBaixa = null;
+let pecaParaBaixa = null;
+
+function marcarRecebido(osId, partName) {
+    osParaBaixa = osId;
+    pecaParaBaixa = partName;
+    
+    document.getElementById('modal-baixa-msg').innerHTML = `Confirmar o recebimento de <b>"${partName.toUpperCase()}"</b> no almoxarifado?`;
+    document.getElementById('modal-baixa-peca').classList.remove('hidden');
+    document.getElementById('modal-baixa-peca').classList.add('flex');
+}
+
+function fecharModalBaixa() {
+    document.getElementById('modal-baixa-peca').classList.add('hidden');
+    document.getElementById('modal-baixa-peca').classList.remove('flex');
+    osParaBaixa = null;
+    pecaParaBaixa = null;
+}
+
+async function confirmarBaixaExecutar() {
+    if (!osParaBaixa || !pecaParaBaixa) return;
+
+    const btn = document.getElementById('btn-executar-baixa');
+    const textoOriginal = btn.innerText;
+    btn.innerText = "SALVANDO...";
+    btn.disabled = true;
 
     try {
         const response = await fetch(API_SYNC, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                os_id: osId,
-                part_name: partName.toUpperCase().trim(),
-                availability: 'STOCK' // Ação de dar baixa é mover para ESTOQUE
+                os_id: osParaBaixa,
+                part_name: pecaParaBaixa.toUpperCase().trim(),
+                availability: 'STOCK'
             })
         });
 
         if (response.ok) {
-            // Recarrega todos os dados do backend para garantir consistência
+            fecharModalBaixa();
             await carregarDados(); 
-            // Volta para a aba de pendências para ver a lista atualizada (o item sumirá)
             switchTab('pending'); 
         } else {
-            const error = await response.text();
-            alert(`Erro ao atualizar o status da peça. Servidor respondeu: ${error}`);
+            alert("Erro ao atualizar o status da peça.");
         }
     } catch (e) {
-        console.error("Falha de conexão ao dar baixa na peça:", e);
-        alert("Falha de conexão. Verifique o console para mais detalhes.");
+        console.error(e);
+        alert("Falha de conexão.");
+    } finally {
+        btn.innerText = textoOriginal;
+        btn.disabled = false;
     }
 }
 
