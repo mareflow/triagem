@@ -496,9 +496,9 @@ async function renderizarPendencias() {
     container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
 
     try {
-        // Busca direta de componentes marcados como 'ORDER' (compras/pedir) cruzando com a tabela service_orders
+        // 🌟 CORREÇÃO: A tabela de origem correta da coluna 'availability' é 'checklist_analysis_general'
         const { data: pendingItems, error } = await supabaseClient
-            .from('component_tracking')
+            .from('checklist_analysis_general')
             .select('*, service_orders(business_id, model, client, status)')
             .eq('availability', 'ORDER');
 
@@ -515,7 +515,7 @@ async function renderizarPendencias() {
             .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
             .map(item => ({
                 peca_id: item.id,
-                nome_peca: item.component_name,
+                nome_peca: item.item_name, // Mapeia 'item_name' da tabela checklist_analysis_general
                 os_business_id: item.service_orders.business_id,
                 os_id: item.service_order_id,
                 modelo: item.service_orders.model,
