@@ -490,83 +490,86 @@
 
         // 1. RENDERIZA A LISTA DE COMPRAS (SÓ O QUE ESTÁ EM PRODUÇÃO E É 'ORDER')
 // --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
-// --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
-function renderizarPendencias() {
+async function renderizarPendencias() {
     const container = document.getElementById('lista-pecas-pendentes');
     if (!container) return;
-    container.innerHTML = ''; // Limpa o conteúdo anterior
+    container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
 
-    let pecasFaltantes = [];
+    try {
+        // Busca direta de componentes marcados como 'ORDER' (compras/pedir) cruzando com a tabela service_orders
+        const { data: pendingItems, error } = await supabaseClient
+            .from('component_tracking')
+            .select('*, service_orders(business_id, model, client, status)')
+            .eq('availability', 'ORDER');
 
-    // Esta parte do seu código já estava correta!
-    allOrders.forEach(os => {
-        const emProducao = !['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'].includes(os.status);
-
-        if (emProducao && os.checklist_geral) {
-            os.checklist_geral.forEach(p => {
-                const statusPeca = (p.availability || "").toUpperCase().trim();
-                // O is_resolved é uma segurança extra para peças que já foram resolvidas mas por algum motivo ainda estão como ORDER
-                if (statusPeca === 'ORDER' && p.is_resolved !== true) {
-                    pecasFaltantes.push({
-                        peca_id: p.id, // ID da peça no checklist
-                        nome_peca: p.item_name,
-                        os_business_id: os.business_id, // Número da OS (ex: O.S-1234)
-                        os_id: os.id, // ID da OS no banco
-                        modelo: os.model,
-                        cliente: os.client
-                    });
-                }
-            });
+        if (error || !pendingItems) {
+            console.error("Erro ao carregar pendências:", error);
+            container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o servidor de compras.</div>';
+            return;
         }
-    });
 
-    // Se não houver peças, exibe a mensagem de "caixa vazia"
-    if (pecasFaltantes.length === 0) {
-        container.innerHTML = `<div class="py-20 text-center"><svg class="mx-auto h-24 w-24 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><p class="mt-4 text-slate-400 font-black text-sm uppercase tracking-widest">Nenhuma pendência de compra ativa.</p></div>`;
-        return;
+        // Filtra localmente apenas componentes que pertencem a OSs ativas (em produção)
+        const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
+        
+        const pecasFaltantes = pendingItems
+            .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
+            .map(item => ({
+                peca_id: item.id,
+                nome_peca: item.component_name,
+                os_business_id: item.service_orders.business_id,
+                os_id: item.service_order_id,
+                modelo: item.service_orders.model,
+                cliente: item.service_orders.client
+            }));
+
+        // Se não houver compras ativas de OSs em produção, exibe a caixa de lista limpa
+        if (pecasFaltantes.length === 0) {
+            container.innerHTML = `<div class="py-20 text-center"><svg class="mx-auto h-20 w-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><p class="mt-4 text-slate-400 font-black text-sm uppercase tracking-widest">Nenhuma pendência de compra ativa.</p></div>`;
+            return;
+        }
+
+        const tabelaHeader = `
+            <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
+                <table class="w-full text-sm">
+                    <thead class="bg-slate-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
+                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
+                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
+                            <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+        `;
+
+        const tabelaFooter = `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        const tabelaRows = pecasFaltantes.map(item => `
+            <tr class="hover:bg-blue-50/50 transition-colors">
+                <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
+                <td class="px-6 py-4 font-bold text-slate-700 uppercase">${item.nome_peca}</td>
+                <td class="px-6 py-4">
+                    <div class="font-bold text-slate-600">${item.cliente}</div>
+                    <div class="text-xs text-slate-400">${item.modelo}</div>
+                </td>
+                <td class="px-6 py-4 text-center">
+                    <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')" 
+                            class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">
+                        Dar Baixa
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+
+        container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
+    } catch (e) {
+        console.error("Erro ao listar pendências de compra:", e);
+        container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o Supabase.</div>';
     }
-
-    // --- CORREÇÃO PRINCIPAL: Gerando o HTML dinamicamente ---
-    const tabelaHeader = `
-        <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
-            <table class="w-full text-sm">
-                <thead class="bg-slate-50">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
-                        <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
-                        <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y divide-slate-100">
-    `;
-
-    const tabelaFooter = `
-                </tbody>
-            </table>
-        </div>
-    `;
-    
-    // Mapeia cada peça faltante para uma linha de tabela (<tr>)
-    const tabelaRows = pecasFaltantes.map(item => `
-        <tr class="hover:bg-blue-50/50 transition-colors">
-            <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
-            <td class="px-6 py-4 font-bold text-slate-700 uppercase">${item.nome_peca}</td>
-            <td class="px-6 py-4">
-                <div class="font-bold text-slate-600">${item.cliente}</div>
-                <div class="text-xs text-slate-400">${item.modelo}</div>
-            </td>
-            <td class="px-6 py-4 text-center">
-                <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')" 
-                        class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">
-                    Dar Baixa
-                </button>
-            </td>
-        </tr>
-    `).join('');
-
-    // Junta o cabeçalho, as linhas e o rodapé para formar a tabela completa
-    container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
 }
 
 let osParaBaixa = null;
