@@ -626,24 +626,39 @@ async function confirmarBaixaExecutar() {
     }
 }
 
-        function atualizarContadores() {
+        // --- 2. CÁLCULO DINÂMICO DE CONTADORES EM TEMPO REAL ---
+        async function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
             const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
             
             let pendingCount = 0;
-            allOrders.forEach(os => {
-                const estaNaProducao = !['Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'].includes(os.status);
-                if (estaNaProducao && os.checklist_geral) {
-                    os.checklist_geral.forEach(p => {
-                        if ((p.availability || "").toUpperCase() === 'ORDER' && p.is_resolved !== true) pendingCount++;
-                    });
-                }
-            });
+            
+            try {
+                // Busca em tempo real todas as peças pendentes de compra (ORDER) associadas a OSs em produção
+                const { data: pendingItems, error } = await supabaseClient
+                    .from('triage_parts')
+                    .select('*, service_orders(status)')
+                    .eq('availability', 'ORDER');
 
-            document.getElementById('count-triage').innerText = `(${triageCount})`;
-            document.getElementById('count-pending').innerText = `(${pendingCount})`;
-            document.getElementById('count-side-triage').innerText = `(${triageCount})`;
-            document.getElementById('count-side-standby').innerText = `(${standbyCount})`;
+                if (!error && pendingItems) {
+                    const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
+                    // Conta apenas peças de ordens que estão ativas na produção
+                    const activePendencies = pendingItems.filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status));
+                    pendingCount = activePendencies.length;
+                }
+            } catch (e) {
+                console.error("Erro ao calcular contador de compras:", e);
+            }
+
+            const elCountTriage = document.getElementById('count-triage');
+            const elCountPending = document.getElementById('count-pending');
+            const elCountSideTriage = document.getElementById('count-side-triage');
+            const elCountSideStandby = document.getElementById('count-side-standby');
+
+            if (elCountTriage) elCountTriage.innerText = `(${triageCount})`;
+            if (elCountPending) elCountPending.innerText = `(${pendingCount})`;
+            if (elCountSideTriage) elCountSideTriage.innerText = `(${triageCount})`;
+            if (elCountSideStandby) elCountSideStandby.innerText = `(${standbyCount})`;
         }
 
         function coletarDadosDasPecas() {
