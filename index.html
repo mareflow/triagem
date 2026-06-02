@@ -313,13 +313,11 @@
             
             let ordensParaMostrar = [];
 
-            // Se estiver na aba de pendências, a sidebar avisa que a lista central é soberana
             if (activeTab === 'pending') {
                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-tight">Lista de Pendências<br>de Compra Ativa</p></div>`;
                 return;
             }
 
-            // Filtra rigorosamente por quem está na Triagem ou Standby
             const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
             ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
             
@@ -388,30 +386,29 @@
                 btnLiberar.classList.remove('hidden');
             }
 
-            // 🌟 CONSULTA DIRETA AO SUPABASE: Busca dados atualizados da tabela component_tracking
+            // 🌟 CONSULTA DIRETA AO SUPABASE CORRIGIDA: Busca na tabela de decisões comerciais do checklist
             try {
-                const { data: trackerItems, error } = await supabaseClient
-                    .from('component_tracking')
+                const { data: checklistItems, error } = await supabaseClient
+                    .from('checklist_analysis_general')
                     .select('*')
                     .eq('service_order_id', selecionada.id)
-                    .eq('current_stage', 'Triagem de Produção');
+                    .eq('decisao_vendas', 'TROCAR');
 
-                if (!error && trackerItems) {
-                    // Mapeia os dados do rastreador físico para a estrutura de renderização do checklist
-                    const formattedItems = trackerItems.map(item => ({
+                if (!error && checklistItems) {
+                    const formattedItems = checklistItems.map(item => ({
                         id: item.id,
-                        item_name: item.component_name,
-                        decisao_vendas: item.verdict_vendas || 'TROCAR',
+                        item_name: item.item_name,
+                        decisao_vendas: item.decisao_vendas || 'TROCAR',
                         status: item.status || 'Pendente',
                         availability: item.availability || 'ORDER'
                     }));
                     renderizarPecas(formattedItems);
                 } else {
-                    renderizarPecas([]);
+                    renderizarPecas(selecionada.checklist_geral || []);
                 }
             } catch (e) {
-                console.error("Erro ao buscar no component_tracking:", e);
-                renderizarPecas([]);
+                console.error("Erro ao buscar no checklist_analysis_general:", e);
+                renderizarPecas(selecionada.checklist_geral || []);
             }
         }
 
@@ -420,14 +417,12 @@
             if (!container) return;
             container.innerHTML = '';
 
-            // Whitelist oficial e unificada da TurboSul (9 itens)
             const whitelist = [
                 "CARCAÇA DE TURBINA (CT)", "ROTOR", "EIXO",
                 "ATUADOR", "GEOMETRIA VARIÁVEL", "CANOTE DA GEOMETRIA",
                 "FLANGE DA GEOMETRIA", "CCE", "REPAROS"
             ];
 
-            // Filtra e valida os componentes
             const filtradas = (items || []).filter(p => {
                 const nome = (p.item_name || "").toUpperCase().trim();
                 const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
@@ -488,145 +483,139 @@
             renderizarFila();
         }
 
-        // --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
-async function renderizarPendencias() {
-    const container = document.getElementById('lista-pecas-pendentes');
-    if (!container) return;
-    container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
+        async function renderizarPendencias() {
+            const container = document.getElementById('lista-pecas-pendentes');
+            if (!container) return;
+            container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
 
-    try {
-        // 🌟 GESTÃO DE ESTOQUE UNIFICADA: Lê estritamente da tabela 'triage_parts' (apenas peças físicas reais)
-        const { data: pendingItems, error } = await supabaseClient
-            .from('triage_parts')
-            .select('*, service_orders(business_id, model, client, status)')
-            .eq('availability', 'ORDER');
+            try {
+                const { data: pendingItems, error } = await supabaseClient
+                    .from('triage_parts')
+                    .select('*, service_orders(business_id, model, client, status)')
+                    .eq('availability', 'ORDER');
 
-        if (error || !pendingItems) {
-            console.error("Erro ao carregar pendências:", error);
-            container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o servidor de compras.</div>';
-            return;
+                if (error || !pendingItems) {
+                    console.error("Erro ao carregar pendências:", error);
+                    container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o servidor de compras.</div>';
+                    return;
+                }
+
+                const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
+                
+                const pecasFaltantes = pendingItems
+                    .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
+                    .map(item => ({
+                        peca_id: item.id,
+                        nome_peca: item.part_name,
+                        os_business_id: item.service_orders.business_id,
+                        os_id: item.service_order_id,
+                        modelo: item.service_orders.model,
+                        cliente: item.service_orders.client
+                    }));
+
+                if (pecasFaltantes.length === 0) {
+                    container.innerHTML = `<div class="py-20 text-center"><svg class="mx-auto h-20 w-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><p class="mt-4 text-slate-400 font-black text-sm uppercase tracking-widest">Nenhuma pendência de compra ativa.</p></div>`;
+                    return;
+                }
+
+                const tabelaHeader = `
+                    <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
+                                    <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                `;
+
+                const tabelaFooter = `
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+                
+                const tabelaRows = pecasFaltantes.map(item => `
+                    <tr class="hover:bg-blue-50/50 transition-colors">
+                        <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
+                        <td class="px-6 py-4 font-bold text-slate-700 uppercase">${item.nome_peca}</td>
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-slate-600">${item.cliente}</div>
+                            <div class="text-xs text-slate-400">${item.modelo}</div>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')" 
+                                    class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">
+                                Dar Baixa
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+
+                container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
+            } catch (e) {
+                console.error("Erro ao listar pendências de compra:", e);
+                container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o Supabase.</div>';
+            }
         }
 
-        // Filtra localmente apenas componentes que pertencem a OSs ativas (em produção)
-        const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
-        
-        const pecasFaltantes = pendingItems
-            .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
-            .map(item => ({
-                peca_id: item.id,
-                nome_peca: item.part_name, // Usa 'part_name' da tabela triage_parts (ex: EIXO, ROTOR, CCE, REPAROS)
-                os_business_id: item.service_orders.business_id,
-                os_id: item.service_order_id,
-                modelo: item.service_orders.model,
-                cliente: item.service_orders.client
-            }));
+        let osParaBaixa = null;
+        let pecaParaBaixa = null;
 
-        // Se não houver compras ativas de OSs em produção, exibe caixa de lista limpa
-        if (pecasFaltantes.length === 0) {
-            container.innerHTML = `<div class="py-20 text-center"><svg class="mx-auto h-20 w-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><p class="mt-4 text-slate-400 font-black text-sm uppercase tracking-widest">Nenhuma pendência de compra ativa.</p></div>`;
-            return;
+        function marcarRecebido(osId, partName) {
+            osParaBaixa = osId;
+            pecaParaBaixa = partName;
+            
+            document.getElementById('modal-baixa-msg').innerHTML = `Confirmar o recebimento de <b>"${partName.toUpperCase()}"</b> no almoxarifado?`;
+            document.getElementById('modal-baixa-peca').classList.remove('hidden');
+            document.getElementById('modal-baixa-peca').classList.add('flex');
         }
 
-        const tabelaHeader = `
-            <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
-                <table class="w-full text-sm">
-                    <thead class="bg-slate-50">
-                        <tr>
-                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
-                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
-                            <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
-                            <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-slate-100">
-        `;
-
-        const tabelaFooter = `
-                    </tbody>
-                </table>
-            </div>
-        `;
-        
-        const tabelaRows = pecasFaltantes.map(item => `
-            <tr class="hover:bg-blue-50/50 transition-colors">
-                <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
-                <td class="px-6 py-4 font-bold text-slate-700 uppercase">${item.nome_peca}</td>
-                <td class="px-6 py-4">
-                    <div class="font-bold text-slate-600">${item.cliente}</div>
-                    <div class="text-xs text-slate-400">${item.modelo}</div>
-                </td>
-                <td class="px-6 py-4 text-center">
-                    <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')" 
-                            class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">
-                        Dar Baixa
-                    </button>
-                </td>
-            </tr>
-        `).join('');
-
-        container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
-    } catch (e) {
-        console.error("Erro ao listar pendências de compra:", e);
-        container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o Supabase.</div>';
-    }
-}
-
-
-let osParaBaixa = null;
-let pecaParaBaixa = null;
-
-function marcarRecebido(osId, partName) {
-    osParaBaixa = osId;
-    pecaParaBaixa = partName;
-    
-    document.getElementById('modal-baixa-msg').innerHTML = `Confirmar o recebimento de <b>"${partName.toUpperCase()}"</b> no almoxarifado?`;
-    document.getElementById('modal-baixa-peca').classList.remove('hidden');
-    document.getElementById('modal-baixa-peca').classList.add('flex');
-}
-
-function fecharModalBaixa() {
-    document.getElementById('modal-baixa-peca').classList.add('hidden');
-    document.getElementById('modal-baixa-peca').classList.remove('flex');
-    osParaBaixa = null;
-    pecaParaBaixa = null;
-}
-
-async function confirmarBaixaExecutar() {
-    if (!osParaBaixa || !pecaParaBaixa) return;
-
-    const btn = document.getElementById('btn-executar-baixa');
-    const textoOriginal = btn.innerText;
-    btn.innerText = "SALVANDO...";
-    btn.disabled = true;
-
-    try {
-        const response = await fetch(API_SYNC, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                os_id: osParaBaixa,
-                part_name: pecaParaBaixa.toUpperCase().trim(),
-                availability: 'STOCK'
-            })
-        });
-
-        if (response.ok) {
-            fecharModalBaixa();
-            await carregarDados(); 
-            switchTab('pending'); 
-        } else {
-            alert("Erro ao atualizar o status da peça.");
+        function fecharModalBaixa() {
+            document.getElementById('modal-baixa-peca').classList.add('hidden');
+            document.getElementById('modal-baixa-peca').classList.remove('flex');
+            osParaBaixa = null;
+            pecaParaBaixa = null;
         }
-    } catch (e) {
-        console.error(e);
-        alert("Falha de conexão.");
-    } finally {
-        btn.innerText = textoOriginal;
-        btn.disabled = false;
-    }
-}
 
-        // --- 2. CÁLCULO DINÂMICO DE CONTADORES EM TEMPO REAL ---
+        async function confirmarBaixaExecutar() {
+            if (!osParaBaixa || !pecaParaBaixa) return;
+
+            const btn = document.getElementById('btn-executar-baixa');
+            const textoOriginal = btn.innerText;
+            btn.innerText = "SALVANDO...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch(API_SYNC, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        os_id: osParaBaixa,
+                        part_name: pecaParaBaixa.toUpperCase().trim(),
+                        availability: 'STOCK'
+                    })
+                });
+
+                if (response.ok) {
+                    fecharModalBaixa();
+                    await carregarDados(); 
+                    switchTab('pending'); 
+                } else {
+                    alert("Erro ao atualizar o status da peça.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Falha de conexão.");
+            } finally {
+                btn.innerText = textoOriginal;
+                btn.disabled = false;
+            }
+        }
+
         async function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
             const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
@@ -634,7 +623,6 @@ async function confirmarBaixaExecutar() {
             let pendingCount = 0;
             
             try {
-                // Busca em tempo real todas as peças pendentes de compra (ORDER) associadas a OSs em produção
                 const { data: pendingItems, error } = await supabaseClient
                     .from('triage_parts')
                     .select('*, service_orders(status)')
@@ -642,7 +630,6 @@ async function confirmarBaixaExecutar() {
 
                 if (!error && pendingItems) {
                     const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
-                    // Conta apenas peças de ordens que estão ativas na produção
                     const activePendencies = pendingItems.filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status));
                     pendingCount = activePendencies.length;
                 }
@@ -815,8 +802,7 @@ async function confirmarBaixaExecutar() {
         function logout() { window.location.href = '/index.html'; }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
 		
-		// --- SINCRONIZAÇÃO DE PEÇAS COM PERSISTÊNCIA NA MEMÓRIA ---
-async function sincronizarPeca(btn, partName, availability) {
+        async function sincronizarPeca(btn, partName, availability) {
             const parent = btn.parentElement;
             const prevActive = parent.querySelector('button.active');
             
@@ -829,7 +815,6 @@ async function sincronizarPeca(btn, partName, availability) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         os_id: selecionada.id,
-                        // GARANTE QUE O NOME VAI EM MAIÚSCULAS PARA O N8N ENCONTRAR NO BANCO
                         part_name: partName.toUpperCase().trim(), 
                         availability: availability
                     })
@@ -837,7 +822,6 @@ async function sincronizarPeca(btn, partName, availability) {
                 
                 if (!response.ok) throw new Error("Erro no servidor");
                 
-                // Atualiza na memória local da página
                 if (selecionada.checklist_geral) {
                     const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
                     if (item) item.availability = availability;
