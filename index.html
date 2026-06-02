@@ -396,16 +396,32 @@ function renderizarPecas(items) {
             if (!container) return;
             container.innerHTML = '';
 
+            // Whitelist oficial e unificada da TurboSul (9 itens)
             const whitelist = [
-                "CARCAÇA DE TURBINA (CT)", "ROTOR COMPRESSOR", "EIXO ROTOR",
+                "CARCAÇA DE TURBINA (CT)", "ROTOR", "EIXO",
                 "ATUADOR", "GEOMETRIA VARIÁVEL", "CANOTE DA GEOMETRIA",
-                "FLANGE DA GEOMETRIA", "CARCAÇA CENTRAL (CCE)", "PRATO COMPRESSOR"
+                "FLANGE DA GEOMETRIA", "CCE", "REPAROS"
             ];
 
-            const filtradas = (items || []).filter(p => {
-                const nome = (p.item_name || "").toUpperCase().trim();
-                const pVendas = (p.decisao_vendas || "").toUpperCase();
-                return whitelist.includes(nome) && (pVendas === "TROCAR" || (p.status && p.status.includes("TROCAR")));
+            // Normaliza nomes de peças legadas na memória para unificar com o painel de Vendas
+            const normalizedItems = (items || []).map(p => {
+                let name = (p.item_name || "").toUpperCase().trim();
+                if (name === "EIXO ROTOR" || name === "EIXO_ROTOR") name = "EIXO";
+                if (name === "ROTOR COMPRESSOR" || name === "ROTOR_COMPRESSOR") name = "ROTOR";
+                if (name === "CARCAÇA CENTRAL (CCE)" || name === "CARCAÇA_CENTRAL") name = "CCE";
+                return {
+                    ...p,
+                    item_name_normalized: name
+                };
+            });
+
+            const filtradas = normalizedItems.filter(p => {
+                const nome = p.item_name_normalized;
+                const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
+                const techVerdict = (p.status || "").toUpperCase().trim();
+                
+                // Exibe se houver veredito de troca comercial ou se o técnico sinalizou troca/condenação
+                return whitelist.includes(nome) && (pVendas === "TROCAR" || techVerdict.includes("TROCAR") || techVerdict.includes("CONDENAR"));
             });
 
             if (filtradas.length === 0) {
@@ -414,23 +430,22 @@ function renderizarPecas(items) {
             }
 
             filtradas.forEach(p => {
-                const nome = p.item_name.toUpperCase();
+                const nomeExibicao = p.item_name_normalized; // Exibe o nome higienizado unificado
+                const nomeOriginalBanco = p.item_name; // Mantém a chave de relacionamento do Supabase
                 
-                // --- CORREÇÃO DE OURO: COMPARAÇÃO ROBUSTA ---
-                // Pegamos o valor, transformamos em MAIÚSCULO e limpamos espaços
                 const valorBanco = (p.availability || "ORDER").toUpperCase().trim();
                 const isStock = (valorBanco === 'STOCK');
 
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nome}">
+                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nomeOriginalBanco}">
                         <div class="flex flex-col">
-                            <span class="text-slate-800 font-black text-xs uppercase">${nome}</span>
+                            <span class="text-slate-800 font-black text-xs uppercase">${nomeExibicao}</span>
                             <span class="text-[9px] text-red-600 font-bold uppercase italic">Veredito: ${p.decisao_vendas || p.status}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1 shadow-inner">
-                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')" 
+                            <button onclick="sincronizarPeca(this, '${nomeOriginalBanco}', 'STOCK')" 
                                     class="btn-toggle-stock ${isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md transition-all">ESTOQUE</button>
-                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')" 
+                            <button onclick="sincronizarPeca(this, '${nomeOriginalBanco}', 'ORDER')" 
                                     class="btn-toggle-order ${!isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md ml-1 transition-all">PEDIR</button>
                         </div>
                     </div>`;
