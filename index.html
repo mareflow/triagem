@@ -342,7 +342,7 @@
             });
         }
 
-        function selecionarOS(id) {
+        async function selecionarOS(id) {
             if (selecionada && selecionada.business_id === id) {
                 selecionada = null;
                 document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active', 'border-l-4', 'border-blue-600', 'bg-blue-50'));
@@ -388,10 +388,34 @@
                 btnLiberar.classList.remove('hidden');
             }
 
-            renderizarPecas(selecionada.checklist_geral || []);
+            // 🌟 CONSULTA DIRETA AO SUPABASE: Busca dados atualizados da tabela component_tracking
+            try {
+                const { data: trackerItems, error } = await supabaseClient
+                    .from('component_tracking')
+                    .select('*')
+                    .eq('service_order_id', selecionada.id)
+                    .eq('current_stage', 'Triagem de Produção');
+
+                if (!error && trackerItems) {
+                    // Mapeia os dados do rastreador físico para a estrutura de renderização do checklist
+                    const formattedItems = trackerItems.map(item => ({
+                        id: item.id,
+                        item_name: item.component_name,
+                        decisao_vendas: item.verdict_vendas || 'TROCAR',
+                        status: item.status || 'Pendente',
+                        availability: item.availability || 'ORDER'
+                    }));
+                    renderizarPecas(formattedItems);
+                } else {
+                    renderizarPecas([]);
+                }
+            } catch (e) {
+                console.error("Erro ao buscar no component_tracking:", e);
+                renderizarPecas([]);
+            }
         }
 
-function renderizarPecas(items) {
+        function renderizarPecas(items) {
             const container = document.getElementById('lista-pecas');
             if (!container) return;
             container.innerHTML = '';
@@ -403,23 +427,10 @@ function renderizarPecas(items) {
                 "FLANGE DA GEOMETRIA", "CCE", "REPAROS"
             ];
 
-            // Normaliza nomes de peças legadas na memória para unificar com o painel de Vendas
-            const normalizedItems = (items || []).map(p => {
-                let name = (p.item_name || "").toUpperCase().trim();
-                if (name === "EIXO ROTOR" || name === "EIXO_ROTOR") name = "EIXO";
-                if (name === "ROTOR COMPRESSOR" || name === "ROTOR_COMPRESSOR") name = "ROTOR";
-                if (name === "CARCAÇA CENTRAL (CCE)" || name === "CARCAÇA_CENTRAL") name = "CCE";
-                return {
-                    ...p,
-                    item_name_normalized: name
-                };
-            });
-
-            const filtradas = normalizedItems.filter(p => {
-                const nome = p.item_name_normalized;
+            // Filtra e valida os componentes
+            const filtradas = (items || []).filter(p => {
+                const nome = (p.item_name || "").toUpperCase().trim();
                 const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
-                
-                // 🌟 CORREÇÃO: Filtra unicamente se a decisão comercial final do Vendas for 'TROCAR'
                 return whitelist.includes(nome) && pVendas === "TROCAR";
             });
 
@@ -429,22 +440,20 @@ function renderizarPecas(items) {
             }
 
             filtradas.forEach(p => {
-                const nomeExibicao = p.item_name_normalized; // Exibe o nome higienizado unificado
-                const nomeOriginalBanco = p.item_name; // Mantém a chave de relacionamento do Supabase
-                
+                const nome = p.item_name.toUpperCase().trim();
                 const valorBanco = (p.availability || "ORDER").toUpperCase().trim();
                 const isStock = (valorBanco === 'STOCK');
 
                 container.innerHTML += `
-                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nomeOriginalBanco}">
+                    <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nome}">
                         <div class="flex flex-col">
-                            <span class="text-slate-800 font-black text-xs uppercase">${nomeExibicao}</span>
-                            <span class="text-[9px] text-red-600 font-bold uppercase italic">Veredito: ${p.decisao_vendas || p.status}</span>
+                            <span class="text-slate-800 font-black text-xs uppercase">${nome}</span>
+                            <span class="text-[9px] text-red-600 font-bold uppercase italic">Veredito: ${p.decisao_vendas}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1 shadow-inner">
-                            <button onclick="sincronizarPeca(this, '${nomeOriginalBanco}', 'STOCK')" 
+                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')" 
                                     class="btn-toggle-stock ${isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md transition-all">ESTOQUE</button>
-                            <button onclick="sincronizarPeca(this, '${nomeOriginalBanco}', 'ORDER')" 
+                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')" 
                                     class="btn-toggle-order ${!isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md ml-1 transition-all">PEDIR</button>
                         </div>
                     </div>`;
