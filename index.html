@@ -418,10 +418,9 @@ function renderizarPecas(items) {
             const filtradas = normalizedItems.filter(p => {
                 const nome = p.item_name_normalized;
                 const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
-                const techVerdict = (p.status || "").toUpperCase().trim();
                 
-                // Exibe se houver veredito de troca comercial ou se o técnico sinalizou troca/condenação
-                return whitelist.includes(nome) && (pVendas === "TROCAR" || techVerdict.includes("TROCAR") || techVerdict.includes("CONDENAR"));
+                // 🌟 CORREÇÃO: Filtra unicamente se a decisão comercial final do Vendas for 'TROCAR'
+                return whitelist.includes(nome) && pVendas === "TROCAR";
             });
 
             if (filtradas.length === 0) {
