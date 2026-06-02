@@ -488,17 +488,16 @@
             renderizarFila();
         }
 
-        // 1. RENDERIZA A LISTA DE COMPRAS (SÓ O QUE ESTÁ EM PRODUÇÃO E É 'ORDER')
-// --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
+        // --- 1. RENDERIZAÇÃO DA ABA DE PENDÊNCIAS (ALMOXARIFADO) ---
 async function renderizarPendencias() {
     const container = document.getElementById('lista-pecas-pendentes');
     if (!container) return;
     container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
 
     try {
-        // 🌟 CORREÇÃO: A tabela de origem correta da coluna 'availability' é 'checklist_analysis_general'
+        // 🌟 GESTÃO DE ESTOQUE UNIFICADA: Lê estritamente da tabela 'triage_parts' (apenas peças físicas reais)
         const { data: pendingItems, error } = await supabaseClient
-            .from('checklist_analysis_general')
+            .from('triage_parts')
             .select('*, service_orders(business_id, model, client, status)')
             .eq('availability', 'ORDER');
 
@@ -515,14 +514,14 @@ async function renderizarPendencias() {
             .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
             .map(item => ({
                 peca_id: item.id,
-                nome_peca: item.item_name, // Mapeia 'item_name' da tabela checklist_analysis_general
+                nome_peca: item.part_name, // Usa 'part_name' da tabela triage_parts (ex: EIXO, ROTOR, CCE, REPAROS)
                 os_business_id: item.service_orders.business_id,
                 os_id: item.service_order_id,
                 modelo: item.service_orders.model,
                 cliente: item.service_orders.client
             }));
 
-        // Se não houver compras ativas de OSs em produção, exibe a caixa de lista limpa
+        // Se não houver compras ativas de OSs em produção, exibe caixa de lista limpa
         if (pecasFaltantes.length === 0) {
             container.innerHTML = `<div class="py-20 text-center"><svg class="mx-auto h-20 w-20 text-slate-200" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg><p class="mt-4 text-slate-400 font-black text-sm uppercase tracking-widest">Nenhuma pendência de compra ativa.</p></div>`;
             return;
@@ -571,6 +570,7 @@ async function renderizarPendencias() {
         container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o Supabase.</div>';
     }
 }
+
 
 let osParaBaixa = null;
 let pecaParaBaixa = null;
