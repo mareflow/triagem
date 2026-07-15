@@ -18,13 +18,12 @@
             background-color: #f8fafc;
         }
 
-        /* Estilização Customizada dos Botões de Disponibilidade */
         .btn-toggle-stock.active {
-            background-color: #16a34a !important; /* green-600 */
+            background-color: #16a34a !important;
             color: white !important;
         }
         .btn-toggle-order.active {
-            background-color: #dc2626 !important; /* red-600 */
+            background-color: #dc2626 !important;
             color: white !important;
         }
         
@@ -38,7 +37,6 @@
             color: #f8fafc;
         }
 
-        /* Checkbox Roxo Customizado */
         .purple-checkbox:checked {
             background-color: #7c3aed;
             border-color: #7c3aed;
@@ -56,7 +54,6 @@
                 <p class="text-slate-500 text-xs font-medium">Gerenciamento de Ordens de Serviço</p>
             </div>
         </div>
-
         <div class="flex items-center space-x-6">
             <div class="flex items-center space-x-2 text-slate-600 pr-4">
                 <span class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Setor Triagem</span>
@@ -72,14 +69,12 @@
         <aside class="w-80 flex flex-col">
             <h2 class="text-slate-800 font-extrabold text-2xl mb-4 tracking-tight uppercase">Triagem de Produção</h2>
             
-            <!-- FILTROS RÁPIDOS DA SIDEBAR -->
             <div id="sidebar-filters" class="flex space-x-1 text-[9px] font-bold mb-4">
                 <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600">FILA (ANÁLISE) <span id="count-side-triage">(0)</span></button>
                 <button type="button" onclick="setActiveSidebarTab('standby')" id="side-tab-standby" class="flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all">STANDBY <span id="count-side-standby">(0)</span></button>
             </div>
 
             <div id="fila-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
-                <!-- Skeleton Loading -->
                 <div class="bg-white p-4 rounded-xl shadow-sm animate-pulse">
                     <div class="h-4 bg-slate-200 rounded w-1/2 mb-3"></div>
                     <div class="h-3 bg-slate-100 rounded w-3/4"></div>
@@ -90,7 +85,6 @@
         <!-- ÁREA DE TRABALHO -->
         <section class="flex-1 flex flex-col">
             
-            <!-- NAVEGAÇÃO SUPERIOR -->
             <div class="flex justify-end space-x-1 mb-4">
                 <button onclick="switchTab('triage')" id="tab-triage" class="px-6 py-2 rounded-l-lg text-sm font-bold tab-active shadow-sm transition">
                     Ordens Aprovadas (Aguardando Decisão) <span id="count-triage" class="ml-1">(0)</span>
@@ -100,10 +94,8 @@
                 </button>
             </div>
 
-            <!-- PAINEL DETALHES -->
             <div id="workspace-content" class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
                 
-                <!-- ESTADO VAZIO -->
                 <div id="empty-state" class="flex-1 flex items-center justify-center flex-col text-slate-400">
                     <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                     <span class="font-bold uppercase tracking-widest text-sm">Selecione uma ordem</span>
@@ -114,7 +106,7 @@
                     <div class="flex justify-between items-start mb-6">
                         <h3 class="text-slate-800 font-extrabold text-xl uppercase tracking-tighter">Detalhes da Logística</h3>
                         <button type="button" onclick="carregarLinhaDoTempo()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">
-                            <i class="fa-solid fa-clock-rotate-left mr-1"></i> Histórico Completo
+                            Histórico Completo
                         </button>
                     </div>
 
@@ -125,14 +117,12 @@
                                 <h3 class="text-xl font-black text-blue-600 uppercase tracking-tighter">Detalhes do Processo</h3>
                                 <button id="close-details-modal-btn" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
                             </div>
-                            
                             <div class="grid grid-cols-2 gap-4 text-sm border-b pb-4 mb-4">
                                 <div><p class="text-gray-500 font-medium uppercase text-xs">Identificação</p><p id="detail-business-id" class="text-lg font-black text-slate-800 leading-tight">--</p></div>
                                 <div><p class="text-gray-500 font-medium uppercase text-xs">Modelo</p><p id="detail-model" class="text-slate-800 font-bold">--</p></div>
                                 <div><p class="text-gray-500 font-medium uppercase text-xs">Cliente</p><p id="detail-client" class="text-slate-800 font-bold">--</p></div>
                                 <div><p class="text-gray-500 font-medium uppercase text-xs">Status Atual</p><span id="detail-status" class="inline-block bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-bold">--</span></div>
                             </div>
-
                             <div class="space-y-4 mb-6">
                                 <div class="grid grid-cols-2 gap-4 text-sm">
                                     <div><p class="text-gray-400 font-bold uppercase text-[10px]">Grau de Dificuldade</p><p id="detail-difficulty" class="text-gray-800 font-bold">--</p></div>
@@ -147,14 +137,12 @@
                                     <p id="detail-observation" class="text-sm bg-slate-50 p-3 rounded-lg mt-1 italic text-gray-800">--</p>
                                 </div>
                             </div>
-
                             <h4 class="text-sm font-bold text-gray-800 uppercase tracking-widest mb-4 text-center border-t pt-4">Linha do Tempo de Produção</h4>
                             <div id="timeline-container" class="space-y-4 border-l-2 border-slate-200 ml-2 pl-4"></div>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-                        <!-- LADO ESQUERDO -->
                         <div class="space-y-6">
                             <div class="bg-slate-50 rounded-xl p-6 border border-slate-200">
                                 <h4 class="text-blue-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Informações OS</h4>
@@ -169,25 +157,21 @@
                                     </div>
                                 </div>
                             </div>
-
                             <div class="bg-purple-50 rounded-xl p-6 border border-purple-100 flex items-center space-x-4">
                                 <input type="checkbox" id="check-analisado" class="w-6 h-6 rounded border-purple-300 text-purple-600 focus:ring-purple-500 purple-checkbox">
                                 <label for="check-analisado" class="text-purple-800 font-black text-xs uppercase tracking-wider cursor-pointer">Marcar como analisado (Vendas)</label>
                             </div>
                         </div>
 
-                        <!-- LADO DIREITO: DISPONIBILIDADE -->
                         <div class="flex flex-col">
                             <h4 class="text-orange-600 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Disponibilidade de Peças</h4>
                             <div id="lista-pecas" class="border border-slate-100 rounded-xl overflow-hidden divide-y divide-slate-100"></div>
                         </div>
                     </div>
 
-                    <!-- RODAPÉ: OBS E BOTÃO -->
                     <div class="mt-auto pt-6 border-t border-slate-100 flex flex-col space-y-4">
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações de Triagem</label>
                         <textarea id="obs-triagem" rows="4" class="obs-input w-full rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Digite observações internas..."></textarea>
-                        
                         <div class="flex justify-end pt-4 space-x-3">
                             <button type="button" id="btn-standby-action" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">
                                 Deixar OS em Standby
@@ -199,7 +183,6 @@
                     </div>
                 </div>
 
-                <!-- PAINEL PENDÊNCIAS -->
                 <div id="pending-panel" class="hidden flex-1 p-8 overflow-y-auto custom-scrollbar">
                     <h3 class="text-orange-600 font-black text-lg uppercase tracking-wider mb-6">Pendências de Peças</h3>
                     <div id="lista-pecas-pendentes" class="space-y-4"></div>
@@ -208,7 +191,6 @@
         </section>
     </main>
 
-    <!-- RODAPÉ -->
     <footer class="py-3 text-center border-t bg-white/40 backdrop-blur-sm z-10">
         <div class="flex items-center justify-center space-x-2">
             <span class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Desenvolvido por</span>
@@ -226,7 +208,6 @@
             </div>
             <h4 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-tight text-center">Gestão de Pendência</h4>
             <p id="modal-confirm-msg" class="text-slate-500 text-sm mb-6 leading-relaxed text-center italic">Detectamos peças faltantes.</p>
-            
             <div class="flex flex-col gap-3">
                 <button onclick="salvarTriagem('Aguardando Desmontagem OS')" class="w-full bg-blue-600 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-blue-700 transition shadow-lg shadow-blue-100">Seguir com Pendência (Ir p/ Desmontagem)</button>
                 <button onclick="salvarTriagem('Aguardando Peças')" class="w-full bg-red-500 text-white font-black py-4 rounded-xl uppercase text-xs tracking-widest hover:bg-red-600 transition">Bloquear OS (Falta Peça Crítica)</button>
@@ -247,7 +228,7 @@
         </div>
     </div>
 
-    <!-- MODAL CONFIRMAÇÃO DE BAIXA (BONITO) -->
+    <!-- MODAL CONFIRMAÇÃO DE BAIXA -->
     <div id="modal-baixa-peca" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center border-t-8 border-green-500">
             <div class="w-20 h-20 bg-green-50 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -307,8 +288,6 @@
             const container = document.getElementById('fila-container');
             if (!container) return;
             container.innerHTML = '';
-            
-            let ordensParaMostrar = [];
 
             if (activeTab === 'pending') {
                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-tight">Lista de Pendências<br>de Compra Ativa</p></div>`;
@@ -316,11 +295,11 @@
             }
 
             const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
-            ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
+            const ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
             
             if (ordensParaMostrar.length === 0) {
-                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">Nenhuma ordem em<br>${statusFiltro}.</p></div>`;
-                 return;
+                container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">Nenhuma ordem em<br>${statusFiltro}.</p></div>`;
+                return;
             }
 
             ordensParaMostrar.forEach(os => {
@@ -351,7 +330,7 @@
 
             document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active', 'border-l-4', 'border-blue-600', 'bg-blue-50'));
             const card = document.getElementById(`card-${id}`);
-            if(card) card.classList.add('active', 'border-l-4', 'border-blue-600', 'bg-blue-50');
+            if (card) card.classList.add('active', 'border-l-4', 'border-blue-600', 'bg-blue-50');
             
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('triage-panel').classList.remove('hidden');
@@ -383,13 +362,13 @@
                 btnLiberar.classList.remove('hidden');
             }
 
-            // 🌟 CONSULTA DIRETA AO SUPABASE CORRIGIDA: Busca na tabela de decisões comerciais do checklist
+            // ✅ CORREÇÃO 1: Busca itens com TROCAR *e* TROCAR CONJUNTO
             try {
                 const { data: checklistItems, error } = await supabaseClient
                     .from('checklist_analysis_general')
                     .select('*')
                     .eq('service_order_id', selecionada.id)
-                    .eq('decisao_vendas', 'TROCAR');
+                    .in('decisao_vendas', ['TROCAR', 'TROCAR CONJUNTO']);
 
                 if (!error && checklistItems) {
                     const formattedItems = checklistItems.map(item => ({
@@ -414,16 +393,18 @@
             if (!container) return;
             container.innerHTML = '';
 
+            // ✅ CORREÇÃO 2: CCO adicionado na whitelist
             const whitelist = [
                 "CARCAÇA DE TURBINA (CT)", "ROTOR", "EIXO",
                 "ATUADOR", "GEOMETRIA VARIÁVEL", "CANOTE DA GEOMETRIA",
-                "FLANGE DA GEOMETRIA", "CCE", "REPAROS"
+                "FLANGE DA GEOMETRIA", "CCO", "CCE", "REPAROS"
             ];
 
+            // ✅ CORREÇÃO 3: Filtro aceita TROCAR e TROCAR CONJUNTO
             const filtradas = (items || []).filter(p => {
                 const nome = (p.item_name || "").toUpperCase().trim();
                 const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
-                return whitelist.includes(nome) && pVendas === "TROCAR";
+                return whitelist.includes(nome) && (pVendas === "TROCAR" || pVendas === "TROCAR CONJUNTO");
             });
 
             if (filtradas.length === 0) {
@@ -492,7 +473,6 @@
                     .eq('availability', 'ORDER');
 
                 if (error || !pendingItems) {
-                    console.error("Erro ao carregar pendências:", error);
                     container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o servidor de compras.</div>';
                     return;
                 }
@@ -515,26 +495,6 @@
                     return;
                 }
 
-                const tabelaHeader = `
-                    <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
-                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
-                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
-                                    <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                `;
-
-                const tabelaFooter = `
-                            </tbody>
-                        </table>
-                    </div>
-                `;
-                
                 const tabelaRows = pecasFaltantes.map(item => `
                     <tr class="hover:bg-blue-50/50 transition-colors">
                         <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
@@ -552,9 +512,21 @@
                     </tr>
                 `).join('');
 
-                container.innerHTML = tabelaHeader + tabelaRows + tabelaFooter;
+                container.innerHTML = `
+                    <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-50">
+                                <tr>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Ordem de Serviço</th>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Peça Pendente</th>
+                                    <th class="px-6 py-3 text-left text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Modelo</th>
+                                    <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">${tabelaRows}</tbody>
+                        </table>
+                    </div>`;
             } catch (e) {
-                console.error("Erro ao listar pendências de compra:", e);
                 container.innerHTML = '<div class="p-10 text-center text-red-500 font-bold text-[10px] uppercase">Erro de comunicação com o Supabase.</div>';
             }
         }
@@ -565,7 +537,6 @@
         function marcarRecebido(osId, partName) {
             osParaBaixa = osId;
             pecaParaBaixa = partName;
-            
             document.getElementById('modal-baixa-msg').innerHTML = `Confirmar o recebimento de <b>"${partName.toUpperCase()}"</b> no almoxarifado?`;
             document.getElementById('modal-baixa-peca').classList.remove('hidden');
             document.getElementById('modal-baixa-peca').classList.add('flex');
@@ -580,32 +551,19 @@
 
         async function confirmarBaixaExecutar() {
             if (!osParaBaixa || !pecaParaBaixa) return;
-
             const btn = document.getElementById('btn-executar-baixa');
             const textoOriginal = btn.innerText;
             btn.innerText = "SALVANDO...";
             btn.disabled = true;
-
             try {
                 const response = await fetch(API_SYNC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        os_id: osParaBaixa,
-                        part_name: pecaParaBaixa.toUpperCase().trim(),
-                        availability: 'STOCK'
-                    })
+                    body: JSON.stringify({ os_id: osParaBaixa, part_name: pecaParaBaixa.toUpperCase().trim(), availability: 'STOCK' })
                 });
-
-                if (response.ok) {
-                    fecharModalBaixa();
-                    await carregarDados(); 
-                    switchTab('pending'); 
-                } else {
-                    alert("Erro ao atualizar o status da peça.");
-                }
+                if (response.ok) { fecharModalBaixa(); await carregarDados(); switchTab('pending'); }
+                else alert("Erro ao atualizar o status da peça.");
             } catch (e) {
-                console.error(e);
                 alert("Falha de conexão.");
             } finally {
                 btn.innerText = textoOriginal;
@@ -616,23 +574,15 @@
         async function atualizarContadores() {
             const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
             const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
-            
             let pendingCount = 0;
-            
             try {
                 const { data: pendingItems, error } = await supabaseClient
-                    .from('triage_parts')
-                    .select('*, service_orders(status)')
-                    .eq('availability', 'ORDER');
-
+                    .from('triage_parts').select('*, service_orders(status)').eq('availability', 'ORDER');
                 if (!error && pendingItems) {
                     const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
-                    const activePendencies = pendingItems.filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status));
-                    pendingCount = activePendencies.length;
+                    pendingCount = pendingItems.filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status)).length;
                 }
-            } catch (e) {
-                console.error("Erro ao calcular contador de compras:", e);
-            }
+            } catch (e) {}
 
             const elCountTriage = document.getElementById('count-triage');
             const elCountPending = document.getElementById('count-pending');
@@ -659,16 +609,14 @@
         }
 
         async function salvarTriagem(statusFinalOverride = null) {
-            if(!selecionada) return;
+            if (!selecionada) return;
             const { pecasEstado, temFaltante } = coletarDadosDasPecas();
-
             if (temFaltante && !statusFinalOverride) {
                 document.getElementById('modal-confirm-msg').innerHTML = `A turbina <b>${selecionada.business_id}</b> tem faltantes. Como deseja proceder?`;
                 document.getElementById('modal-confirm').classList.remove('hidden');
                 document.getElementById('modal-confirm').classList.add('flex');
                 return;
             }
-
             const payload = { 
                 os_id: selecionada.id, 
                 status: statusFinalOverride || 'Aguardando Desmontagem OS', 
@@ -676,7 +624,6 @@
                 items_availability: pecasEstado,
                 user_id: FALLBACK_USER 
             };
-
             try {
                 const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (res.ok) location.reload();
@@ -689,14 +636,11 @@
             const btn = document.getElementById('btn-standby-action');
             btn.disabled = true; 
             btn.innerText = "SALVANDO...";
-
             const payload = { 
-                os_id: selecionada.id, 
-                status: 'Standby', 
+                os_id: selecionada.id, status: 'Standby', 
                 observations: document.getElementById('obs-triagem').value, 
                 items_availability: pecasEstado 
             };
-
             try {
                 const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
                 if (res.ok) {
@@ -715,8 +659,7 @@
             if (!selecionada) return;
             const { pecasEstado } = coletarDadosDasPecas();
             const payload = { 
-                os_id: selecionada.id, 
-                status: 'Aguardando Triagem', 
+                os_id: selecionada.id, status: 'Aguardando Triagem', 
                 observations: document.getElementById('obs-triagem').value, 
                 items_availability: pecasEstado 
             };
@@ -727,11 +670,7 @@
         }
 
         async function carregarLinhaDoTempo() {
-            if (!selecionada) {
-                alert("Selecione uma OS primeiro.");
-                return;
-            }
-
+            if (!selecionada) { alert("Selecione uma OS primeiro."); return; }
             const os = selecionada;
             document.getElementById('detail-business-id').textContent = os.business_id;
             document.getElementById('detail-model').textContent = os.model;
@@ -752,17 +691,14 @@
 
             const timeline = document.getElementById('timeline-container');
             timeline.innerHTML = '<p class="text-xs text-blue-500 animate-pulse text-center py-4 uppercase font-bold">Buscando rastreio...</p>';
-            
             document.getElementById('details-modal').classList.remove('hidden');
             document.getElementById('details-modal').classList.add('flex');
             
             try {
                 const { data: events, error } = await supabaseClient
-                    .from('history_events')
-                    .select('*')
+                    .from('history_events').select('*')
                     .eq('service_order_id', os.id)
                     .order('timestamp', { ascending: true });
-
                 if (events && events.length > 0) {
                     timeline.innerHTML = events.map(ev => `
                         <div class="relative pb-4 border-l-2 border-blue-100 pl-4 ml-2">
@@ -781,52 +717,103 @@
 
         function formatMaintenanceExtras(extras) {
             if (!extras || typeof extras !== 'object') return '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional.</li>';
-            const mapping = {
-                actuator: 'Atuador',
-                geometry: 'Geometria Variável',
-                geometryStem: 'Canote da Geometria',
-                geometryFlange: 'Flange da Geometria'
-            };
+            const mapping = { actuator: 'Atuador', geometry: 'Geometria Variável', geometryStem: 'Canote da Geometria', geometryFlange: 'Flange da Geometria' };
             const items = Object.entries(extras)
                 .filter(([_, val]) => val === true || (val && val.came === true))
                 .map(([key, _]) => `<li class="font-black text-slate-700 uppercase text-[11px]">${mapping[key] || key}</li>`);
-
             return items.length > 0 ? items.join('') : '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional identificado.</li>';
         }
 
         function getUrgencyColor(u) { return u === 'Alta' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'; }
         function confirmarSalvar() { salvarTriagem(); }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
-		
+
         async function sincronizarPeca(btn, partName, availability) {
             const parent = btn.parentElement;
             const prevActive = parent.querySelector('button.active');
-            
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
-
             try {
                 const response = await fetch(API_SYNC, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        os_id: selecionada.id,
-                        part_name: partName.toUpperCase().trim(), 
-                        availability: availability
-                    })
+                    body: JSON.stringify({ os_id: selecionada.id, part_name: partName.toUpperCase().trim(), availability: availability })
                 });
-                
                 if (!response.ok) throw new Error("Erro no servidor");
-                
                 if (selecionada.checklist_geral) {
                     const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
                     if (item) item.availability = availability;
                 }
-                console.log(`✅ Sincronizado com Sucesso: ${partName}`);
             } catch (e) { 
                 alert("❌ Erro ao salvar disponibilidade.");
                 btn.classList.remove('active');
-                if(prevActive) prevActive.classList.add('active');
+                if (prevActive) prevActive.classList.add('active');
+            }
+        }
+
+        setInterval(() => {
+            const cleaningKey = `timer_sector_cleaning_start_TRIAGEM`;
+            const otherKey = `timer_other_activities_start_TRIAGEM`;
+            const btnClean = document.getElementById('btn-sector-cleaning');
+            const btnOther = document.getElementById('btn-other-activities');
+            const updateButtonTime = (key, btnElement, baseText) => {
+                const startTimeStr = localStorage.getItem(key);
+                if (startTimeStr && btnElement) {
+                    const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+                    const min = Math.floor(elapsed / 60);
+                    const sec = elapsed % 60;
+                    btnElement.innerText = `Parar ${baseText} (${min}:${sec.toString().padStart(2, '0')})`;
+                }
+            };
+            updateButtonTime(cleaningKey, btnClean, 'Limpeza');
+            updateButtonTime(otherKey, btnOther, 'Atividades');
+        }, 1000);
+
+        async function toggleSectorCleaning(sectorName) {
+            const timerKey = `timer_sector_cleaning_start_${sectorName}`;
+            const startTimeStr = localStorage.getItem(timerKey);
+            const btn = document.getElementById('btn-sector-cleaning');
+            if (!startTimeStr) {
+                localStorage.setItem(timerKey, new Date().toISOString());
+                if (btn) { btn.classList.replace('bg-turbo-teal', 'bg-red-600'); btn.classList.replace('hover:bg-teal-600', 'hover:bg-red-700'); btn.classList.add('animate-pulse'); btn.innerText = "Parar Limpeza (00:00)"; }
+            } else {
+                localStorage.removeItem(timerKey);
+                if (btn) { btn.classList.replace('bg-red-600', 'bg-turbo-teal'); btn.classList.replace('hover:bg-red-700', 'hover:bg-teal-600'); btn.classList.remove('animate-pulse'); btn.innerText = "Iniciar Limpeza Setor"; }
+                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+                const formattedTime = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')} min`;
+                let osId = (typeof currentSelection !== 'undefined' && currentSelection) ? currentSelection.id : null;
+                try {
+                    const insertData = { action: 'Limpeza do Setor Executada', details: `O operador realizou a limpeza do setor de ${sectorName} durante ${formattedTime}.`, timestamp: new Date().toISOString() };
+                    if (osId) insertData.service_order_id = osId;
+                    const res = await supabaseClient.from('history_events').insert(insertData);
+                    if (res.error) throw res.error;
+                    alert(`Limpeza concluída: ${formattedTime}`);
+                } catch (e) { console.error("Erro ao salvar limpeza:", e); }
+            }
+        }
+
+        async function toggleOtherActivities(sectorName) {
+            const timerKey = `timer_other_activities_start_${sectorName}`;
+            const startTimeStr = localStorage.getItem(timerKey);
+            const btn = document.getElementById('btn-other-activities');
+            if (!startTimeStr) {
+                localStorage.setItem(timerKey, new Date().toISOString());
+                if (btn) { btn.classList.replace('bg-slate-500', 'bg-red-600'); btn.classList.replace('hover:bg-slate-600', 'hover:bg-red-700'); btn.classList.add('animate-pulse'); btn.innerText = "Parar Atividades (00:00)"; }
+            } else {
+                localStorage.removeItem(timerKey);
+                if (btn) { btn.classList.replace('bg-red-600', 'bg-slate-500'); btn.classList.replace('hover:bg-red-700', 'hover:bg-slate-600'); btn.classList.remove('animate-pulse'); btn.innerText = "Outras Atividades"; }
+                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
+                const formattedTime = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')} min`;
+                let osId = (typeof currentSelection !== 'undefined' && currentSelection) ? currentSelection.id : null;
+                const detailInput = prompt("Qual atividade foi realizada?");
+                if (!detailInput) return;
+                try {
+                    const insertData = { action: 'Outras Atividades Executadas', details: `Operador registrou: "${detailInput}" - Duração: ${formattedTime} no setor ${sectorName}.`, timestamp: new Date().toISOString() };
+                    if (osId) insertData.service_order_id = osId;
+                    const res = await supabaseClient.from('history_events').insert(insertData);
+                    if (res.error) throw res.error;
+                    alert(`Atividade registrada: ${formattedTime}`);
+                } catch (e) { console.error("Erro ao salvar atividade:", e); }
             }
         }
     </script>
