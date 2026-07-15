@@ -8,39 +8,15 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; }
-        
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        .os-card.active {
-            border-left: 4px solid #2563EB;
-            background-color: #f8fafc;
-        }
-
-        .btn-toggle-stock.active {
-            background-color: #16a34a !important;
-            color: white !important;
-        }
-        .btn-toggle-order.active {
-            background-color: #dc2626 !important;
-            color: white !important;
-        }
-        
-        .tab-active {
-            background-color: #2563EB;
-            color: white;
-        }
-        
-        .obs-input {
-            background-color: #334155;
-            color: #f8fafc;
-        }
-
-        .purple-checkbox:checked {
-            background-color: #7c3aed;
-            border-color: #7c3aed;
-        }
+        .os-card.active { border-left: 4px solid #2563EB; background-color: #f8fafc; }
+        .btn-toggle-stock.active { background-color: #16a34a !important; color: white !important; }
+        .btn-toggle-order.active { background-color: #dc2626 !important; color: white !important; }
+        .tab-active { background-color: #2563EB; color: white; }
+        .obs-input { background-color: #334155; color: #f8fafc; }
+        .purple-checkbox:checked { background-color: #7c3aed; border-color: #7c3aed; }
     </style>
 </head>
 <body class="bg-slate-100 h-screen flex flex-col overflow-hidden">
@@ -55,9 +31,7 @@
             </div>
         </div>
         <div class="flex items-center space-x-6">
-            <div class="flex items-center space-x-2 text-slate-600 pr-4">
-                <span class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Setor Triagem</span>
-            </div>
+            <span class="text-sm font-black text-slate-800 uppercase tracking-wider leading-none">Setor Triagem</span>
             <button onclick="window.location.href='https://mareflow.github.io/turbosul-login/'" class="bg-red-500 text-white px-4 py-1.5 rounded-md text-sm font-bold hover:bg-red-600 transition">Sair</button>
         </div>
     </header>
@@ -65,15 +39,12 @@
     <!-- ÁREA PRINCIPAL -->
     <main class="flex-1 flex overflow-hidden p-6 gap-6">
         
-        <!-- COLUNA ESQUERDA: FILA -->
         <aside class="w-80 flex flex-col">
             <h2 class="text-slate-800 font-extrabold text-2xl mb-4 tracking-tight uppercase">Triagem de Produção</h2>
-            
             <div id="sidebar-filters" class="flex space-x-1 text-[9px] font-bold mb-4">
                 <button type="button" onclick="setActiveSidebarTab('triage')" id="side-tab-triage" class="flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600">FILA (ANÁLISE) <span id="count-side-triage">(0)</span></button>
                 <button type="button" onclick="setActiveSidebarTab('standby')" id="side-tab-standby" class="flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all">STANDBY <span id="count-side-standby">(0)</span></button>
             </div>
-
             <div id="fila-container" class="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2">
                 <div class="bg-white p-4 rounded-xl shadow-sm animate-pulse">
                     <div class="h-4 bg-slate-200 rounded w-1/2 mb-3"></div>
@@ -82,9 +53,7 @@
             </div>
         </aside>
 
-        <!-- ÁREA DE TRABALHO -->
         <section class="flex-1 flex flex-col">
-            
             <div class="flex justify-end space-x-1 mb-4">
                 <button onclick="switchTab('triage')" id="tab-triage" class="px-6 py-2 rounded-l-lg text-sm font-bold tab-active shadow-sm transition">
                     Ordens Aprovadas (Aguardando Decisão) <span id="count-triage" class="ml-1">(0)</span>
@@ -95,22 +64,18 @@
             </div>
 
             <div id="workspace-content" class="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden">
-                
                 <div id="empty-state" class="flex-1 flex items-center justify-center flex-col text-slate-400">
                     <svg class="w-16 h-16 mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
                     <span class="font-bold uppercase tracking-widest text-sm">Selecione uma ordem</span>
                 </div>
 
-                <!-- CONTEÚDO DA TRIAGEM -->
                 <div id="triage-panel" class="hidden flex-1 flex flex-col p-8 overflow-y-auto custom-scrollbar">
                     <div class="flex justify-between items-start mb-6">
                         <h3 class="text-slate-800 font-extrabold text-xl uppercase tracking-tighter">Detalhes da Logística</h3>
-                        <button type="button" onclick="carregarLinhaDoTempo()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">
-                            Histórico Completo
-                        </button>
+                        <button type="button" onclick="carregarLinhaDoTempo()" class="bg-slate-600 hover:bg-slate-700 text-white font-bold py-1 px-3 rounded-md transition duration-150 uppercase text-[10px] tracking-widest">Histórico Completo</button>
                     </div>
 
-                    <!-- MODAL DE HISTÓRICO COMPLETO -->
+                    <!-- MODAL HISTÓRICO -->
                     <div id="details-modal" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-[110]">
                         <div class="bg-white w-full max-w-lg rounded-xl shadow-2xl p-6 overflow-y-auto max-h-[90vh]">
                             <div class="flex justify-between items-center border-b pb-4 mb-4 sticky top-0 bg-white z-10">
@@ -173,12 +138,8 @@
                         <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Observações de Triagem</label>
                         <textarea id="obs-triagem" rows="4" class="obs-input w-full rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none" placeholder="Digite observações internas..."></textarea>
                         <div class="flex justify-end pt-4 space-x-3">
-                            <button type="button" id="btn-standby-action" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">
-                                Deixar OS em Standby
-                            </button>
-                            <button type="button" id="btn-liberar-producao" onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">
-                                Liberar para Produção
-                            </button>
+                            <button type="button" id="btn-standby-action" onclick="colocarEmStandby()" class="bg-slate-100 hover:bg-slate-200 text-slate-500 font-black py-4 px-6 rounded-xl uppercase tracking-widest text-[10px] transition-all">Deixar OS em Standby</button>
+                            <button type="button" id="btn-liberar-producao" onclick="confirmarSalvar()" class="bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-10 rounded-xl uppercase tracking-widest text-sm shadow-lg shadow-blue-200 transition-all transform hover:-translate-y-1">Liberar para Produção</button>
                         </div>
                     </div>
                 </div>
@@ -249,14 +210,14 @@
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpnaGFxbGFxb3pzc2tmbGRnc2ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjkyMDY1MzQsImV4cCI6MjA4NDc4MjUzNH0.aC2DMOUNhS2uK6KGI5Sf2c2vGhrCKHMnRyZhL3WwSus';
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        const API_GET = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
+        const API_GET  = 'https://webhook.mareflow.com.br/webhook/logistics/triage';
         const API_POST = 'https://webhook.mareflow.com.br/webhook/logistics/save-triage';
         const API_SYNC = 'https://webhook.mareflow.com.br/webhook/logistics/sync-part';
         const FALLBACK_USER = '8ab0d7ed-055c-4480-a1af-eb0b08894682';
 
-        let allOrders = []; 
-        let selecionada = null; 
-        let activeTab = 'triage'; 
+        let allOrders = [];
+        let selecionada = null;
+        let activeTab = 'triage';
         window.activeSidebarTab = 'triage';
 
         document.addEventListener('DOMContentLoaded', carregarDados);
@@ -268,7 +229,7 @@
                 const response = await fetch(API_GET);
                 const data = await response.json();
                 allOrders = Array.isArray(data) ? data : [];
-                renderizarFila(); 
+                renderizarFila();
                 atualizarContadores();
             } catch (err) {
                 allOrders = [];
@@ -279,8 +240,12 @@
 
         function setActiveSidebarTab(tab) {
             window.activeSidebarTab = tab;
-            document.getElementById('side-tab-triage').className = tab === 'triage' ? 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600' : 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
-            document.getElementById('side-tab-standby').className = tab === 'standby' ? 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600' : 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
+            document.getElementById('side-tab-triage').className = tab === 'triage'
+                ? 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600'
+                : 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
+            document.getElementById('side-tab-standby').className = tab === 'standby'
+                ? 'flex-1 py-2.5 rounded-xl bg-blue-600 text-white transition-all border border-blue-600'
+                : 'flex-1 py-2.5 rounded-xl bg-white text-slate-400 border border-slate-200 hover:bg-slate-50 transition-all';
             renderizarFila();
         }
 
@@ -288,20 +253,16 @@
             const container = document.getElementById('fila-container');
             if (!container) return;
             container.innerHTML = '';
-
             if (activeTab === 'pending') {
                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-tight">Lista de Pendências<br>de Compra Ativa</p></div>`;
                 return;
             }
-
             const statusFiltro = window.activeSidebarTab === 'triage' ? 'Aguardando Triagem' : 'Standby';
             const ordensParaMostrar = allOrders.filter(os => os.status === statusFiltro);
-            
             if (ordensParaMostrar.length === 0) {
                 container.innerHTML = `<div class="py-10 text-center"><p class="text-slate-400 font-bold text-[10px] uppercase tracking-widest leading-relaxed">Nenhuma ordem em<br>${statusFiltro}.</p></div>`;
                 return;
             }
-
             ordensParaMostrar.forEach(os => {
                 const isActive = selecionada && selecionada.business_id === os.business_id ? 'active border-l-4 border-blue-600 bg-blue-50 shadow-sm' : 'bg-white border-slate-200';
                 container.innerHTML += `
@@ -331,26 +292,26 @@
             document.querySelectorAll('.os-card').forEach(c => c.classList.remove('active', 'border-l-4', 'border-blue-600', 'bg-blue-50'));
             const card = document.getElementById(`card-${id}`);
             if (card) card.classList.add('active', 'border-l-4', 'border-blue-600', 'bg-blue-50');
-            
+
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('triage-panel').classList.remove('hidden');
 
             document.getElementById('info-cliente').innerText = selecionada.client || '---';
             document.getElementById('info-modelo').innerText = selecionada.model || '---';
             document.getElementById('info-os').innerText = selecionada.business_id || '---';
-            
+
             const campoPrevisao = document.getElementById('info-previsao');
             if (campoPrevisao) campoPrevisao.innerText = selecionada.previsao_saida ? selecionada.previsao_saida.split('T')[0] : '---';
-            
+
             document.getElementById('segunda-hora-check-visual').checked = selecionada.segunda_hora === true;
-            document.getElementById('obs-triagem').value = selecionada.observations || "";
+            document.getElementById('obs-triagem').value = selecionada.observations || '';
 
             const btnStandby = document.getElementById('btn-standby-action');
             const btnLiberar = document.getElementById('btn-liberar-producao');
 
             if (selecionada.status === 'Standby') {
                 btnStandby.innerText = "VOLTAR PARA FILA DE ANÁLISE";
-                btnStandby.onclick = () => liberarDeStandby(); 
+                btnStandby.onclick = () => liberarDeStandby();
                 btnStandby.classList.replace('bg-slate-100', 'bg-blue-50');
                 btnStandby.classList.replace('text-slate-500', 'text-blue-700');
                 btnLiberar.classList.add('hidden');
@@ -362,15 +323,37 @@
                 btnLiberar.classList.remove('hidden');
             }
 
-            // ✅ CORREÇÃO 1: Busca itens com TROCAR *e* TROCAR CONJUNTO
+            // ✅ CORREÇÃO PRINCIPAL: Garante o UUID real do Supabase via business_id
+            // O objeto da API externa pode ter um 'id' diferente do UUID do Supabase
+            document.getElementById('lista-pecas').innerHTML =
+                '<div class="p-6 text-center text-slate-400 animate-pulse text-[10px] font-bold uppercase">Carregando peças...</div>';
+
             try {
-                const { data: checklistItems, error } = await supabaseClient
+                // Passo 1: busca o UUID real da OS no Supabase pelo business_id
+                const { data: osData, error: osError } = await supabaseClient
+                    .from('service_orders')
+                    .select('id')
+                    .eq('business_id', selecionada.business_id)
+                    .single();
+
+                if (osError || !osData) {
+                    console.error('Não foi possível encontrar a OS no Supabase:', osError);
+                    renderizarPecas([]);
+                    return;
+                }
+
+                const supabaseOsId = osData.id;
+                // Salva o UUID real no objeto selecionada para uso posterior (salvar triagem, etc.)
+                selecionada._supabaseId = supabaseOsId;
+
+                // Passo 2: busca o checklist usando o UUID correto
+                const { data: checklistItems, error: checklistError } = await supabaseClient
                     .from('checklist_analysis_general')
                     .select('*')
-                    .eq('service_order_id', selecionada.id)
+                    .eq('service_order_id', supabaseOsId)
                     .in('decisao_vendas', ['TROCAR', 'TROCAR CONJUNTO']);
 
-                if (!error && checklistItems) {
+                if (!checklistError && checklistItems) {
                     const formattedItems = checklistItems.map(item => ({
                         id: item.id,
                         item_name: item.item_name,
@@ -380,11 +363,11 @@
                     }));
                     renderizarPecas(formattedItems);
                 } else {
-                    renderizarPecas(selecionada.checklist_geral || []);
+                    renderizarPecas([]);
                 }
             } catch (e) {
-                console.error("Erro ao buscar no checklist_analysis_general:", e);
-                renderizarPecas(selecionada.checklist_geral || []);
+                console.error('Erro ao buscar checklist:', e);
+                renderizarPecas([]);
             }
         }
 
@@ -393,14 +376,14 @@
             if (!container) return;
             container.innerHTML = '';
 
-            // ✅ CORREÇÃO 2: CCO adicionado na whitelist
+            // ✅ Whitelist completa incluindo CCO
             const whitelist = [
                 "CARCAÇA DE TURBINA (CT)", "ROTOR", "EIXO",
                 "ATUADOR", "GEOMETRIA VARIÁVEL", "CANOTE DA GEOMETRIA",
                 "FLANGE DA GEOMETRIA", "CCO", "CCE", "REPAROS"
             ];
 
-            // ✅ CORREÇÃO 3: Filtro aceita TROCAR e TROCAR CONJUNTO
+            // ✅ Aceita TROCAR e TROCAR CONJUNTO
             const filtradas = (items || []).filter(p => {
                 const nome = (p.item_name || "").toUpperCase().trim();
                 const pVendas = (p.decisao_vendas || "").toUpperCase().trim();
@@ -416,7 +399,6 @@
                 const nome = p.item_name.toUpperCase().trim();
                 const valorBanco = (p.availability || "ORDER").toUpperCase().trim();
                 const isStock = (valorBanco === 'STOCK');
-
                 container.innerHTML += `
                     <div class="flex items-center justify-between p-4 border-b border-slate-50 last:border-0 hover:bg-slate-50 transition" data-id="${p.id}" data-name="${nome}">
                         <div class="flex flex-col">
@@ -424,9 +406,9 @@
                             <span class="text-[9px] text-red-600 font-bold uppercase italic">Veredito: ${p.decisao_vendas}</span>
                         </div>
                         <div class="flex bg-slate-100 rounded-lg p-1 shadow-inner">
-                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')" 
+                            <button onclick="sincronizarPeca(this, '${nome}', 'STOCK')"
                                     class="btn-toggle-stock ${isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md transition-all">ESTOQUE</button>
-                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')" 
+                            <button onclick="sincronizarPeca(this, '${nome}', 'ORDER')"
                                     class="btn-toggle-order ${!isStock ? 'active' : ''} text-[9px] font-black uppercase px-4 py-2 rounded-md ml-1 transition-all">PEDIR</button>
                         </div>
                     </div>`;
@@ -435,10 +417,10 @@
 
         function switchTab(type) {
             activeTab = type;
-            const triagePanel = document.getElementById('triage-panel');
+            const triagePanel  = document.getElementById('triage-panel');
             const pendingPanel = document.getElementById('pending-panel');
-            const tabTriage = document.getElementById('tab-triage');
-            const tabPending = document.getElementById('tab-pending');
+            const tabTriage    = document.getElementById('tab-triage');
+            const tabPending   = document.getElementById('tab-pending');
             const sidebarFilters = document.getElementById('sidebar-filters');
 
             triagePanel.classList.add('hidden');
@@ -446,14 +428,14 @@
             document.getElementById('empty-state').classList.add('hidden');
 
             if (type === 'triage') {
-                tabTriage.className = 'px-6 py-2 rounded-l-lg text-sm font-bold tab-active shadow-sm transition';
+                tabTriage.className  = 'px-6 py-2 rounded-l-lg text-sm font-bold tab-active shadow-sm transition';
                 tabPending.className = 'px-6 py-2 rounded-r-lg text-sm font-bold bg-white text-slate-600 hover:bg-slate-50 shadow-sm transition';
                 sidebarFilters.classList.remove('opacity-20', 'pointer-events-none');
                 if (!selecionada) document.getElementById('empty-state').classList.remove('hidden');
                 else triagePanel.classList.remove('hidden');
             } else {
                 tabPending.className = 'px-6 py-2 rounded-r-lg text-sm font-bold tab-active shadow-sm transition';
-                tabTriage.className = 'px-6 py-2 rounded-l-lg text-sm font-bold bg-white text-slate-600 hover:bg-slate-50 shadow-sm transition';
+                tabTriage.className  = 'px-6 py-2 rounded-l-lg text-sm font-bold bg-white text-slate-600 hover:bg-slate-50 shadow-sm transition';
                 sidebarFilters.classList.add('opacity-20', 'pointer-events-none');
                 pendingPanel.classList.remove('hidden');
                 renderizarPendencias();
@@ -465,7 +447,6 @@
             const container = document.getElementById('lista-pecas-pendentes');
             if (!container) return;
             container.innerHTML = '<div class="p-10 text-center text-slate-400 animate-pulse font-bold text-[10px] uppercase">Buscando pendências de compras...</div>';
-
             try {
                 const { data: pendingItems, error } = await supabaseClient
                     .from('triage_parts')
@@ -478,7 +459,6 @@
                 }
 
                 const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
-                
                 const pecasFaltantes = pendingItems
                     .filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status))
                     .map(item => ({
@@ -495,22 +475,16 @@
                     return;
                 }
 
-                const tabelaRows = pecasFaltantes.map(item => `
+                const rows = pecasFaltantes.map(item => `
                     <tr class="hover:bg-blue-50/50 transition-colors">
                         <td class="px-6 py-4 font-black text-blue-600">${item.os_business_id}</td>
                         <td class="px-6 py-4 font-bold text-slate-700 uppercase">${item.nome_peca}</td>
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-slate-600">${item.cliente}</div>
-                            <div class="text-xs text-slate-400">${item.modelo}</div>
-                        </td>
+                        <td class="px-6 py-4"><div class="font-bold text-slate-600">${item.cliente}</div><div class="text-xs text-slate-400">${item.modelo}</div></td>
                         <td class="px-6 py-4 text-center">
-                            <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')" 
-                                    class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">
-                                Dar Baixa
-                            </button>
+                            <button onclick="marcarRecebido('${item.os_id}', '${item.nome_peca}')"
+                                    class="bg-green-500 hover:bg-green-600 text-white font-bold text-[10px] py-2 px-4 rounded-lg uppercase tracking-wider transition transform hover:scale-105">Dar Baixa</button>
                         </td>
-                    </tr>
-                `).join('');
+                    </tr>`).join('');
 
                 container.innerHTML = `
                     <div class="overflow-hidden rounded-xl border border-slate-100 shadow-sm bg-white">
@@ -523,7 +497,7 @@
                                     <th class="px-6 py-3 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Ação</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-100">${tabelaRows}</tbody>
+                            <tbody class="divide-y divide-slate-100">${rows}</tbody>
                         </table>
                     </div>`;
             } catch (e) {
@@ -557,8 +531,7 @@
             btn.disabled = true;
             try {
                 const response = await fetch(API_SYNC, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ os_id: osParaBaixa, part_name: pecaParaBaixa.toUpperCase().trim(), availability: 'STOCK' })
                 });
                 if (response.ok) { fecharModalBaixa(); await carregarDados(); switchTab('pending'); }
@@ -572,35 +545,30 @@
         }
 
         async function atualizarContadores() {
-            const triageCount = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
+            const triageCount  = allOrders.filter(o => o.status === 'Aguardando Triagem').length;
             const standbyCount = allOrders.filter(o => o.status === 'Standby').length;
             let pendingCount = 0;
             try {
                 const { data: pendingItems, error } = await supabaseClient
                     .from('triage_parts').select('*, service_orders(status)').eq('availability', 'ORDER');
                 if (!error && pendingItems) {
-                    const excludedStatuses = ['Aguardando Análise Técnica', 'Aguardando Vendas Comercial', 'Aguardando Triagem', 'Standby', 'Concluída', 'Cancelada'];
-                    pendingCount = pendingItems.filter(item => item.service_orders && !excludedStatuses.includes(item.service_orders.status)).length;
+                    const excl = ['Aguardando Análise Técnica','Aguardando Vendas Comercial','Aguardando Triagem','Standby','Concluída','Cancelada'];
+                    pendingCount = pendingItems.filter(i => i.service_orders && !excl.includes(i.service_orders.status)).length;
                 }
             } catch (e) {}
-
-            const elCountTriage = document.getElementById('count-triage');
-            const elCountPending = document.getElementById('count-pending');
-            const elCountSideTriage = document.getElementById('count-side-triage');
-            const elCountSideStandby = document.getElementById('count-side-standby');
-
-            if (elCountTriage) elCountTriage.innerText = `(${triageCount})`;
-            if (elCountPending) elCountPending.innerText = `(${pendingCount})`;
-            if (elCountSideTriage) elCountSideTriage.innerText = `(${triageCount})`;
-            if (elCountSideStandby) elCountSideStandby.innerText = `(${standbyCount})`;
+            const el = (id) => document.getElementById(id);
+            if (el('count-triage'))       el('count-triage').innerText       = `(${triageCount})`;
+            if (el('count-pending'))      el('count-pending').innerText      = `(${pendingCount})`;
+            if (el('count-side-triage'))  el('count-side-triage').innerText  = `(${triageCount})`;
+            if (el('count-side-standby')) el('count-side-standby').innerText = `(${standbyCount})`;
         }
 
         function coletarDadosDasPecas() {
             const pecasEstado = [];
             let temFaltante = false;
             document.querySelectorAll('#lista-pecas > div[data-name]').forEach(div => {
-                const idItem = div.getAttribute('data-id');
-                const name = div.getAttribute('data-name');
+                const idItem  = div.getAttribute('data-id');
+                const name    = div.getAttribute('data-name');
                 const isOrder = div.querySelector('.btn-toggle-order').classList.contains('active');
                 if (isOrder) temFaltante = true;
                 pecasEstado.push({ id: idItem, name: name, availability: isOrder ? 'ORDER' : 'STOCK' });
@@ -617,12 +585,14 @@
                 document.getElementById('modal-confirm').classList.add('flex');
                 return;
             }
-            const payload = { 
-                os_id: selecionada.id, 
-                status: statusFinalOverride || 'Aguardando Desmontagem OS', 
-                observations: document.getElementById('obs-triagem').value, 
+            // Usa o UUID real do Supabase se disponível
+            const osId = selecionada._supabaseId || selecionada.id;
+            const payload = {
+                os_id: osId,
+                status: statusFinalOverride || 'Aguardando Desmontagem OS',
+                observations: document.getElementById('obs-triagem').value,
                 items_availability: pecasEstado,
-                user_id: FALLBACK_USER 
+                user_id: FALLBACK_USER
             };
             try {
                 const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -634,12 +604,13 @@
             if (!selecionada) return;
             const { pecasEstado } = coletarDadosDasPecas();
             const btn = document.getElementById('btn-standby-action');
-            btn.disabled = true; 
+            btn.disabled = true;
             btn.innerText = "SALVANDO...";
-            const payload = { 
-                os_id: selecionada.id, status: 'Standby', 
-                observations: document.getElementById('obs-triagem').value, 
-                items_availability: pecasEstado 
+            const osId = selecionada._supabaseId || selecionada.id;
+            const payload = {
+                os_id: osId, status: 'Standby',
+                observations: document.getElementById('obs-triagem').value,
+                items_availability: pecasEstado
             };
             try {
                 const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -648,20 +619,21 @@
                     document.getElementById('modal-status-standby').classList.remove('hidden');
                     document.getElementById('modal-status-standby').classList.add('flex');
                 }
-            } catch (err) { 
-                alert("Erro ao mover."); 
-                btn.disabled = false; 
-                btn.innerText = "Deixar OS em Standby"; 
+            } catch (err) {
+                alert("Erro ao mover.");
+                btn.disabled = false;
+                btn.innerText = "Deixar OS em Standby";
             }
         }
 
         async function liberarDeStandby() {
             if (!selecionada) return;
             const { pecasEstado } = coletarDadosDasPecas();
-            const payload = { 
-                os_id: selecionada.id, status: 'Aguardando Triagem', 
-                observations: document.getElementById('obs-triagem').value, 
-                items_availability: pecasEstado 
+            const osId = selecionada._supabaseId || selecionada.id;
+            const payload = {
+                os_id: osId, status: 'Aguardando Triagem',
+                observations: document.getElementById('obs-triagem').value,
+                items_availability: pecasEstado
             };
             try {
                 const res = await fetch(API_POST, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
@@ -679,7 +651,7 @@
             document.getElementById('detail-difficulty').textContent = os.difficulty || '1';
             document.getElementById('detail-trade-in').textContent = os.is_trade_in ? `Troca (${os.trade_in_option})` : 'Venda Comum';
             document.getElementById('detail-observation').textContent = os.observation || 'Sem observações técnicas.';
-            
+
             const listExtras = document.getElementById('detail-maintenance-extras');
             try {
                 let extras = os.maintenance_extras;
@@ -693,11 +665,12 @@
             timeline.innerHTML = '<p class="text-xs text-blue-500 animate-pulse text-center py-4 uppercase font-bold">Buscando rastreio...</p>';
             document.getElementById('details-modal').classList.remove('hidden');
             document.getElementById('details-modal').classList.add('flex');
-            
+
             try {
-                const { data: events, error } = await supabaseClient
+                const supabaseOsId = os._supabaseId || os.id;
+                const { data: events } = await supabaseClient
                     .from('history_events').select('*')
-                    .eq('service_order_id', os.id)
+                    .eq('service_order_id', supabaseOsId)
                     .order('timestamp', { ascending: true });
                 if (events && events.length > 0) {
                     timeline.innerHTML = events.map(ev => `
@@ -724,7 +697,6 @@
             return items.length > 0 ? items.join('') : '<li class="text-gray-400 font-bold uppercase text-[10px]">Nenhum item adicional identificado.</li>';
         }
 
-        function getUrgencyColor(u) { return u === 'Alta' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'; }
         function confirmarSalvar() { salvarTriagem(); }
         document.getElementById('close-details-modal-btn').onclick = () => document.getElementById('details-modal').classList.add('hidden');
 
@@ -734,17 +706,13 @@
             parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             try {
+                const osId = selecionada._supabaseId || selecionada.id;
                 const response = await fetch(API_SYNC, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ os_id: selecionada.id, part_name: partName.toUpperCase().trim(), availability: availability })
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ os_id: osId, part_name: partName.toUpperCase().trim(), availability: availability })
                 });
                 if (!response.ok) throw new Error("Erro no servidor");
-                if (selecionada.checklist_geral) {
-                    const item = selecionada.checklist_geral.find(p => p.item_name.toUpperCase().trim() === partName.toUpperCase().trim());
-                    if (item) item.availability = availability;
-                }
-            } catch (e) { 
+            } catch (e) {
                 alert("❌ Erro ao salvar disponibilidade.");
                 btn.classList.remove('active');
                 if (prevActive) prevActive.classList.add('active');
@@ -752,70 +720,21 @@
         }
 
         setInterval(() => {
-            const cleaningKey = `timer_sector_cleaning_start_TRIAGEM`;
-            const otherKey = `timer_other_activities_start_TRIAGEM`;
-            const btnClean = document.getElementById('btn-sector-cleaning');
-            const btnOther = document.getElementById('btn-other-activities');
-            const updateButtonTime = (key, btnElement, baseText) => {
+            ['btn-sector-cleaning', 'btn-other-activities'].forEach(btnId => {
+                const btn = document.getElementById(btnId);
+                const key = btnId === 'btn-sector-cleaning'
+                    ? 'timer_sector_cleaning_start_TRIAGEM'
+                    : 'timer_other_activities_start_TRIAGEM';
                 const startTimeStr = localStorage.getItem(key);
-                if (startTimeStr && btnElement) {
+                if (startTimeStr && btn) {
                     const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
                     const min = Math.floor(elapsed / 60);
                     const sec = elapsed % 60;
-                    btnElement.innerText = `Parar ${baseText} (${min}:${sec.toString().padStart(2, '0')})`;
+                    const label = btnId === 'btn-sector-cleaning' ? 'Limpeza' : 'Atividades';
+                    btn.innerText = `Parar ${label} (${min}:${sec.toString().padStart(2, '0')})`;
                 }
-            };
-            updateButtonTime(cleaningKey, btnClean, 'Limpeza');
-            updateButtonTime(otherKey, btnOther, 'Atividades');
+            });
         }, 1000);
-
-        async function toggleSectorCleaning(sectorName) {
-            const timerKey = `timer_sector_cleaning_start_${sectorName}`;
-            const startTimeStr = localStorage.getItem(timerKey);
-            const btn = document.getElementById('btn-sector-cleaning');
-            if (!startTimeStr) {
-                localStorage.setItem(timerKey, new Date().toISOString());
-                if (btn) { btn.classList.replace('bg-turbo-teal', 'bg-red-600'); btn.classList.replace('hover:bg-teal-600', 'hover:bg-red-700'); btn.classList.add('animate-pulse'); btn.innerText = "Parar Limpeza (00:00)"; }
-            } else {
-                localStorage.removeItem(timerKey);
-                if (btn) { btn.classList.replace('bg-red-600', 'bg-turbo-teal'); btn.classList.replace('hover:bg-red-700', 'hover:bg-teal-600'); btn.classList.remove('animate-pulse'); btn.innerText = "Iniciar Limpeza Setor"; }
-                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
-                const formattedTime = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')} min`;
-                let osId = (typeof currentSelection !== 'undefined' && currentSelection) ? currentSelection.id : null;
-                try {
-                    const insertData = { action: 'Limpeza do Setor Executada', details: `O operador realizou a limpeza do setor de ${sectorName} durante ${formattedTime}.`, timestamp: new Date().toISOString() };
-                    if (osId) insertData.service_order_id = osId;
-                    const res = await supabaseClient.from('history_events').insert(insertData);
-                    if (res.error) throw res.error;
-                    alert(`Limpeza concluída: ${formattedTime}`);
-                } catch (e) { console.error("Erro ao salvar limpeza:", e); }
-            }
-        }
-
-        async function toggleOtherActivities(sectorName) {
-            const timerKey = `timer_other_activities_start_${sectorName}`;
-            const startTimeStr = localStorage.getItem(timerKey);
-            const btn = document.getElementById('btn-other-activities');
-            if (!startTimeStr) {
-                localStorage.setItem(timerKey, new Date().toISOString());
-                if (btn) { btn.classList.replace('bg-slate-500', 'bg-red-600'); btn.classList.replace('hover:bg-slate-600', 'hover:bg-red-700'); btn.classList.add('animate-pulse'); btn.innerText = "Parar Atividades (00:00)"; }
-            } else {
-                localStorage.removeItem(timerKey);
-                if (btn) { btn.classList.replace('bg-red-600', 'bg-slate-500'); btn.classList.replace('hover:bg-red-700', 'hover:bg-slate-600'); btn.classList.remove('animate-pulse'); btn.innerText = "Outras Atividades"; }
-                const elapsed = Math.floor((new Date() - new Date(startTimeStr)) / 1000);
-                const formattedTime = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, '0')} min`;
-                let osId = (typeof currentSelection !== 'undefined' && currentSelection) ? currentSelection.id : null;
-                const detailInput = prompt("Qual atividade foi realizada?");
-                if (!detailInput) return;
-                try {
-                    const insertData = { action: 'Outras Atividades Executadas', details: `Operador registrou: "${detailInput}" - Duração: ${formattedTime} no setor ${sectorName}.`, timestamp: new Date().toISOString() };
-                    if (osId) insertData.service_order_id = osId;
-                    const res = await supabaseClient.from('history_events').insert(insertData);
-                    if (res.error) throw res.error;
-                    alert(`Atividade registrada: ${formattedTime}`);
-                } catch (e) { console.error("Erro ao salvar atividade:", e); }
-            }
-        }
     </script>
 </body>
 </html>
